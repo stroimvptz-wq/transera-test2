@@ -23,7 +23,7 @@ function showLandingTab(tab){
   document.getElementById('landing-error').textContent='';
 }
 async function apiRequest(path,body,token){
- const res=await fetch(API_URL+'?route='+encodeURIComponent(path),{method:body?'POST':'GET',headers:{...(body?{'Content-Type':'application/json'}:{}),...(token?{Authorization:'Bearer '+token}:{})},...(body?{body:JSON.stringify(body)}:{})});
+ const res=await fetch(API_URL+'?route='+encodeURIComponent(path),{method:body?'POST':'GET',headers:{...(body?{'Content-Type':'application/json'}:{}),...(token?{'X-TRANSERA-Token':'Bearer '+token}:{})},...(body?{body:JSON.stringify(body)}:{})});
  const data=await res.json().catch(()=>({}));
  if(!res.ok)throw Error(data.error||'Ошибка сервера ('+res.status+')');
  return data;
@@ -42,12 +42,12 @@ async function submitLanding(){
   if(landingTab==='register'){payload.full_name=get('full_name').trim();payload.organization=get('organization').trim();}
   const result=await apiRequest(landingTab==='register'?'/register':'/login',payload);
   if(!result.token)throw Error('Сервер не вернул токен');
-  localStorage.setItem('transera-auth-token',result.token);
-  sessionStorage.removeItem('transera-auth-token');
+  localStorage.removeItem('transera-auth-token');
+  sessionStorage.setItem('transera-auth-token',result.token);
   currentUser=result.user||null;
   applyProfileOverrides();
   document.getElementById('landing').hidden=true;
-  page='home';initNavigation();render();
+  page='home';initNavigation();render();void syncDownload();
  }catch(e){error.textContent=e instanceof TypeError?'Нет соединения с сервером. Проверьте доступность функции и настройки CORS.':e.message;}
  finally{btn.disabled=false;}
 }
@@ -59,12 +59,9 @@ document.addEventListener('click',e=>{
 });
 document.addEventListener('keydown',e=>{if(e.key==='Enter'&&e.target.closest('#landing-fields')){e.preventDefault();submitLanding();}});
 showLandingTab('login');
-(async()=>{
- const token=localStorage.getItem('transera-auth-token')||sessionStorage.getItem('transera-auth-token');
- if(!token)return;
- try{const data=await apiRequest('/me',null,token);currentUser=data.user;applyProfileOverrides();localStorage.setItem('transera-auth-token',token);sessionStorage.removeItem('transera-auth-token');document.getElementById('landing').hidden=true;page='home';initNavigation();render();}
- catch(e){if(!(e instanceof TypeError)){localStorage.removeItem('transera-auth-token');sessionStorage.removeItem('transera-auth-token');}}
-})();
+// Require a fresh login whenever the page is opened or reloaded.
+localStorage.removeItem('transera-auth-token');
+sessionStorage.removeItem('transera-auth-token');
 const money=n=>new Intl.NumberFormat('ru-RU',{maximumFractionDigits:2}).format(Number(n)||0)+' ₽';
 const num=v=>Math.max(0,Number(v)||0);
 const defaults=()=>({mode:'hired',from:'',to:'',distance:0,emptyKm:0,rate:0,markup:0,extraCharge:0,manualPrice:'',carrierRate:0,carrierFixed:0,carrierPricing:'fixed',fuelConsumption:30,fuelPrice:65,driverPay:0,perDiem:0,tolls:0,parking:0,depreciation:1,maintenance:0,other:0,forwarderCosts:0,client:'',carrier:'',driver:'',cargo:'',weight:0,vehicle:'',loadDate:'',unloadDate:'',contactClient:'',contactCarrier:'',contactDriver:'',notes:'',status:'Новый',docsReceived:false,clientPayments:[],carrierPayments:[],clientDueDate:'',carrierDueDate:'',closedAt:'',actualCost:''});
@@ -75,8 +72,91 @@ function calc(d){const distance=num(d.distance),km=distance;const own=(km*num(d.
 function openDB(){return new Promise((resolve,reject)=>{const req=indexedDB.open('transera-v2',1);req.onupgradeneeded=()=>{const x=req.result;['trips','calculations'].forEach(t=>{if(!x.objectStoreNames.contains(t))x.createObjectStore(t,{keyPath:'id'});});};req.onsuccess=()=>resolve(req.result);req.onerror=()=>reject(req.error);});}
 function store(name,mode='readonly'){return db.transaction(name,mode).objectStore(name);}
 function all(name){return new Promise((res,rej)=>{const r=store(name).getAll();r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error);});}
-function put(name,item){return new Promise((res,rej)=>{const r=store(name,'readwrite').put(item);r.onsuccess=()=>res();r.onerror=()=>rej(r.error);});}
-function del(name,id){return new Promise((res,rej)=>{const r=store(name,'readwrite').delete(id);r.onsuccess=()=>res();r.onerror=()=>rej(r.error);});}
+// New records only: old browser records are never automatically uploaded.
+const syncAccount=()=>currentUser?.email?.trim().toLowerCase()||'';
+const syncToken=()=>sessionStorage.getItem('transera-auth-token');
+const syncKey=(kind)=>'transera-cloud-v1:'+kind+':'+syncAccount();
+function syncRead(kind){try{const v=JSON.parse(localStorage.getItem(syncKey(kind))||'[]');return Array.isArray(v)?v:[];}catch{return [];}}
+function syncWrite(kind,v){localStorage.setItem(syncKey(kind),JSON.stringify(v));}
+function synced(name,id){return syncRead('ids').includes(name+':'+id);}
+function markSynced(name,id){const a=syncRead('ids'),key=name+':'+id;if(!a.includes(key)){a.push(key);syncWrite('ids',a);}}
+function localPut(name,item){return new Promise((res,rej)=>{const r=store(name,'readwrite').put(item);r.onsuccess=()=>res();r.onerror=()=>rej(r.error);});}
+function localDel(name,id){return new Promise((res,rej)=>{const r=store(name,'readwrite').delete(id);r.onsuccess=()=>res();r.onerror=()=>rej(r.error);});}
+function localGet(name,id){return new Promise((res,rej)=>{const r=store(name).get(id);r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error);});}
+let syncRunning=false;
+let syncError='';
+function showSyncStatus(){
+ let panel=document.getElementById('transera-sync-status');
+ if(!panel){
+  panel=document.createElement('div');panel.id='transera-sync-status';
+  panel.style.cssText='position:fixed;bottom:12px;right:12px;z-index:9999;max-width:min(370px,calc(100vw - 24px));background:#14253d;color:#fff;border:1px solid #3b7190;border-radius:10px;padding:10px 12px;font:13px/1.5 system-ui,sans-serif;box-shadow:0 3px 16px #0005';
+  document.body.appendChild(panel);
+ }
+ if(!syncAccount()||!syncToken()){panel.hidden=true;return;}
+ const pending=syncRead('queue').length;
+ // Keep the overlay completely out of the way when synchronization is healthy.
+ if(!syncError && pending===0){panel.hidden=true;return;}
+ panel.hidden=false;
+ panel.textContent=syncError?'Синхронизация: '+syncError:'Ожидают отправки: '+pending;
+ const btn=document.createElement('button');btn.type='button';btn.textContent='Проверить снова';btn.style.cssText='display:block;margin-top:6px;padding:5px 9px;cursor:pointer';
+ btn.onclick=async()=>{syncError='';panel.textContent='Проверяю соединение…';await syncDownload();showSyncStatus();};
+ panel.appendChild(btn);
+}
+
+function syncEnqueue(name,id,action,item){
+ if(!syncAccount()||!syncToken())return;
+ const queue=syncRead('queue').filter(x=>!(x.name===name&&x.id===id));
+ queue.push({name,id,action,item,nonce:uid()});
+ syncWrite('queue',queue);void syncNow();
+}
+async function put(name,item){
+ const previous=await localGet(name,item.id);
+ await localPut(name,item);
+ // Existing records from before cloud synchronization remain local-only.
+ if(syncAccount()&&(!previous||synced(name,item.id))){
+  markSynced(name,item.id);syncEnqueue(name,item.id,'save',item);
+ }
+}
+async function del(name,id){
+ const cloud=synced(name,id);
+ await localDel(name,id);
+ if(cloud)syncEnqueue(name,id,'delete',null);
+}
+async function syncNow(){
+ if(syncRunning||!db||!syncAccount()||!syncToken()||!navigator.onLine)return;
+ syncRunning=true;const account=syncAccount(),token=syncToken();
+ try{
+  for(const entry of syncRead('queue')){
+   if(account!==syncAccount()||token!==syncToken())break;
+   await apiRequest('/'+entry.name+'/'+entry.action,entry.action==='save'?{id:entry.id,data:entry.item}:{id:entry.id},token);
+   if(account!==syncAccount())break;
+   syncWrite('queue',syncRead('queue').filter(x=>x.nonce!==entry.nonce));
+  }
+ }catch(e){syncError='Отправка: '+(e?.message||String(e));showSyncStatus();console.warn('Cloud synchronization postponed; browser data retained',e);}
+ finally{syncRunning=false;showSyncStatus();}
+}
+async function syncDownload(){
+ if(!db||!syncAccount()||!syncToken()||!navigator.onLine)return;
+ const account=syncAccount(),token=syncToken();
+ await syncNow();
+ for(const name of ['trips','calculations']){
+  let response;
+  try{response=await apiRequest('/'+name+'/list',null,token);}
+  catch(e){syncError='Загрузка: '+(e?.message||String(e));showSyncStatus();console.warn('Cloud list unavailable',e);return;}
+  if(account!==syncAccount()||token!==syncToken())return;
+  const items=Array.isArray(response)?response:response?.items??response?.[name]??response?.records??response?.data;
+  if(!Array.isArray(items)){syncError='Сервер вернул неожиданный формат списка '+name;showSyncStatus();console.warn('Unexpected cloud list response',name,response);return;}
+  const pending=new Set(syncRead('queue').filter(x=>x.name===name).map(x=>x.id));
+  for(const item of items){
+   if(!item||typeof item.id!=='string'||pending.has(item.id))continue;
+   const previous=await localGet(name,item.id);
+   // Do not replace old local data or newer unsent local changes.
+   if(!previous){await localPut(name,item);markSynced(name,item.id);}
+  }
+ }
+ await refresh();showSyncStatus();
+}
+window.addEventListener('online',()=>{void syncDownload();});
 async function refresh(){trips=await all('trips');calculations=await all('calculations');render();}
 const field=(key,label,type='number',opts=null)=>'<label>'+label+(opts?'<select data-field="'+key+'">'+opts.map(o=>'<option value="'+esc(o[0])+'" '+(String(draft[key])===String(o[0])?'selected':'')+'>'+esc(o[1])+'</option>').join('')+'</select>':'<input data-field="'+key+'" type="'+(type==='number'?'text':type)+'" '+(type==='number'?'inputmode="decimal" data-numeric="1" autocomplete="off"':'')+' value="'+esc(type==='number'&&Number(draft[key])===0?'':draft[key])+'" placeholder="'+(type==='number'?'0':'')+'">')+'</label>';
 function editor(){const own=draft.mode==='own';return '<div class="card"><h2>Данные перевозки</h2><div class="fields">'+field('mode','Тип транспорта','text',[['own','Собственный транспорт'],['hired','Наёмный перевозчик']])+'<div></div>'+field('from','Откуда','text')+field('distance','Расстояние, км')+field('to','Куда','text')+field('rate','Ставка, ₽/км')+(own?'':field('markup','Наценка, %'))+'</div><div class="section"><h2>'+(own?'Расходы собственного транспорта':'Расходы наёмного перевозчика')+'</h2><div class="fields">'+(own?field('fuelConsumption','Расход топлива, л/100 км')+field('fuelPrice','Цена топлива, ₽/л')+field('driverPay','Зарплата водителя, ₽/км')+field('tolls','Платные дороги, ₽')+field('depreciation','Амортизация, ₽/км'):field('carrierFixed','Стоимость перевозчика за рейс, ₽')+field('carrierRate','Стоимость перевозчика, ₽/км')+field('forwarderCosts','Дополнительные расходы экспедитора, ₽'))+'</div></div></div>';}
@@ -101,7 +181,7 @@ let tripEditor=false,search='',statusFilter='Все',dashboardFilter='';
 const activeTrip=t=>!['Закрыт','Отменён'].includes(normalizeStatus(t));
 const matchesDashboardFilter=t=>dashboardFilter==='active'?activeTrip(t):dashboardFilter==='client-debt'?due(t,'client')>0.009:dashboardFilter==='carrier-debt'?due(t,'carrier')>0.009:true;
 const dashboardFilterTitle=()=>({'all':'Все рейсы','active':'Незакрытые рейсы','revenue':'Рейсы с выручкой','client-debt':'Долги заказчиков','carrier-debt':'Долги перевозчикам'})[dashboardFilter]||'Все рейсы';
-function tripsPage(){let list=trips.filter(t=>matchesDashboardFilter(t)&&(dashboardFilter!=='revenue'||calc(t).price>0)&&(statusFilter==='Все'||normalizeStatus(t)===statusFilter)&&[t.from,t.to,t.client,t.carrier,t.id].join(' ').toLowerCase().includes(search.toLowerCase())).sort((a,b)=>b.createdAt.localeCompare(a.createdAt));return '<div class="top"><div><h1>Рейсы</h1><p class="muted">'+(dashboardFilter?dashboardFilterTitle():'Журнал перевозок и финансовых результатов')+'</p></div><button class="btn" data-action="blank-trip">+ Новый рейс</button></div>'+(tripEditor?'<div class="section"><h2>'+(editing?'Редактирование рейса':'Новый рейс')+'</h2><div class="two">'+editor()+results(false)+'</div>'+tripFields()+'</div>':'<div class="card section">'+(dashboardFilter?'<div class="actions"><button class="btn secondary" data-action="clear-dashboard-filter">Показать все рейсы</button></div>':'')+'<div class="fields"><label>Поиск<input id="trip-search" placeholder="Маршрут, клиент, перевозчик, номер" value="'+esc(search)+'"></label><label>Статус<select id="status-filter">'+['Все',...statuses].map(s=>'<option '+(s===statusFilter?'selected':'')+'>'+s+'</option>').join('')+'</select></label></div><div class="trip-list">'+list.map(t=>'<button type="button" class="trip-list-card" data-action="edit-trip" data-id="'+esc(t.id)+'" aria-label="Открыть рейс '+esc(t.number||t.id.slice(0,8))+'"><span class="trip-list-head"><strong>'+esc(t.number||t.id.slice(0,8))+'</strong><span class="pill">'+esc(normalizeStatus(t))+'</span></span><span class="trip-list-route">'+esc(t.from)+' — '+esc(t.to)+'</span><span class="trip-list-meta">'+esc(t.client||'Заказчик не указан')+' · '+(t.mode==='own'?'Свой транспорт':'Наёмный перевозчик')+'</span><span class="trip-list-bottom"><span>Прибыль: <strong class="'+(calc(t).profit<0?'loss':'profit')+'">'+money(calc(t).profit)+'</strong></span><span class="trip-list-open">Подробнее ›</span></span></button>').join('')+'</div>'+(list.length?'':'<p class="muted">Рейсов пока нет.</p>')+'</div>');}
+function tripsPage(){let list=trips.filter(t=>matchesDashboardFilter(t)&&(dashboardFilter!=='revenue'||calc(t).price>0)&&(statusFilter==='Все'||(statusFilter==='Не оплачен'?expected(t,'client')>0&&paid(t,'client')<0.01:(statusFilter==='Частично оплачен'?expected(t,'client')>0&&paid(t,'client')>=0.01&&due(t,'client')>=0.01:normalizeStatus(t)===statusFilter)))&&[t.from,t.to,t.client,t.carrier,t.id].join(' ').toLowerCase().includes(search.toLowerCase())).sort((a,b)=>b.createdAt.localeCompare(a.createdAt));return '<div class="top"><div><h1>Рейсы</h1><p class="muted">'+(dashboardFilter?dashboardFilterTitle():'Журнал перевозок и финансовых результатов')+'</p></div><button class="btn" data-action="blank-trip">+ Новый рейс</button></div>'+(tripEditor?'<div class="section"><h2>'+(editing?'Редактирование рейса':'Новый рейс')+'</h2><div class="two">'+editor()+results(false)+'</div>'+tripFields()+'</div>':'<div class="card section">'+(dashboardFilter?'<div class="actions"><button class="btn secondary" data-action="clear-dashboard-filter">Показать все рейсы</button></div>':'')+'<div class="fields"><label>Поиск<input id="trip-search" placeholder="Маршрут, клиент, перевозчик, номер" value="'+esc(search)+'"></label><label>Статус<select id="status-filter">'+['Все','В пути','Закрыт','Не оплачен','Частично оплачен'].map(s=>'<option '+(s===statusFilter?'selected':'')+'>'+s+'</option>').join('')+'</select></label></div><div class="trip-list">'+list.map(t=>'<button type="button" class="trip-list-card" data-action="edit-trip" data-id="'+esc(t.id)+'" aria-label="Открыть рейс '+esc(t.number||t.id.slice(0,8))+'"><span class="trip-list-head"><strong>'+esc(t.number||t.id.slice(0,8))+'</strong><span class="pill">'+esc(expected(t,'client')<=0?'Нет начисления':due(t,'client')<0.01?'Оплачено':paid(t,'client')>0?'Частично оплачено':'Не оплачено')+'</span></span><span class="trip-list-route">'+esc(t.from)+' — '+esc(t.to)+'</span><span class="trip-list-meta">Оплата заказчика: <strong>'+esc(payLabel(t,'client'))+'</strong>'+(due(t,'client')>0.009?' · Долг: '+money(due(t,'client')):'')+'</span><span class="trip-list-meta">'+esc(t.client||'Заказчик не указан')+' · '+(t.mode==='own'?'Свой транспорт':'Наёмный перевозчик')+'</span><span class="trip-list-bottom"><span>Прибыль: <strong class="'+(calc(t).profit<0?'loss':'profit')+'">'+money(calc(t).profit)+'</strong></span><span class="trip-list-open">Подробнее ›</span></span></button>').join('')+'</div>'+(list.length?'':'<p class="muted">Рейсов пока нет.</p>')+'</div>');}
 const localISODate=d=>d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
 let financePeriod='month',financeDate=localISODate(new Date());
 function financeRange(){
@@ -183,5 +263,5 @@ document.addEventListener('change',e=>{if(e.target.dataset.field&&e.target.tagNa
 document.addEventListener('change',e=>{if(e.target.matches('[data-docs-received]')){if(draft.docsReceived!==e.target.checked)markTripChanged();draft.docsReceived=e.target.checked;render();}else if(e.target.dataset.field&&e.target.type==='date'){if(draft[e.target.dataset.field]!==e.target.value)markTripChanged();draft[e.target.dataset.field]=e.target.value;}});
 document.addEventListener('click',async e=>{if(e.target.closest('[data-go-home]')){await goHomeSafely();return;}if(e.target.closest('[data-go-back]')){goBack();return;}const stat=e.target.closest('[data-dashboard-filter]');if(stat){dashboardFilter=stat.dataset.dashboardFilter;statusFilter='Все';search='';tripEditor=false;setPage('trips');return;}const nav=e.target.closest('[data-page]');if(nav){dashboardFilter='';statusFilter='Все';tripEditor=false;setPage(nav.dataset.page);return;}const tab=e.target.closest('[data-tab]');if(tab){calcTab=tab.dataset.tab;render();return;}const btn=e.target.closest('[data-action]');if(!btn)return;const a=btn.dataset.action,id=btn.dataset.id;try{if(a==='clear-dashboard-filter'){dashboardFilter='';statusFilter='Все';search='';render();}else if(a==='add-payment'){const side=btn.dataset.side,amountEl=document.querySelector('[data-payment-amount="'+side+'"]'),dateEl=document.querySelector('[data-payment-date="'+side+'"]');const amount=Number((amountEl?.value||'').replace(',','.'));if(!Number.isFinite(amount)||amount<=0)return alert('Укажите положительную сумму.');if(amount>due(draft,side)+0.009)return alert('Сумма превышает остаток долга.');if(!dateEl?.value)return alert('Укажите дату оплаты.');markTripChanged();draft[side+'Payments']=[...payments(draft,side),{id:uid(),amount,date:dateEl.value}];render();}else if(a==='remove-payment'){const side=btn.dataset.side;const remaining=payments(draft,side).filter(p=>p.id!==id);if(remaining.length===payments(draft,side).length)return;markTripChanged();draft[side+'Payments']=remaining;render();}else if(a==='close-trip'){if(!editing)return alert('Сначала сохраните рейс кнопкой «Сохранить рейс».');const missing=closeReadiness(draft);if(missing.length){alert('Рейс пока нельзя закрыть. Осталось выполнить:\n'+missing.join('\n'));return;}if(!confirm('Подтвердить доставку груза и полностью закрыть рейс?'))return;draft.status='Закрыт';draft.closedAt=new Date().toISOString();const old=trips.find(t=>t.id===editing);await put('trips',{...draft,id:editing,number:old?.number||draft.number,createdAt:old?.createdAt||draft.createdAt});tripEditor=false;editing=null;page='dashboard';await refresh();}else if(a==='save-calc'){await put('calculations',{...draft,id:uid(),createdAt:new Date().toISOString()});await refresh();}else if(a==='load-calc'){const c=calculations.find(c=>c.id===id);if(!c)return;selectedCalcId=id;draft={...defaults(),...c};render();document.querySelector('.saved-calc-actions')?.scrollIntoView({behavior:'smooth',block:'nearest'});}else if(a==='trip-from-saved-calc'){const c=calculations.find(c=>c.id===id);if(!c)return;draft={...defaults(),...c};delete draft.id;delete draft.createdAt;selectedCalcId=null;editing=null;tripEditMode=true;dashboardFilter='';statusFilter='Все';tripEditor=true;page='trips';pushNavigation();render();}else if(a==='delete-calc'){if(confirm('Удалить расчёт?')){await del('calculations',id);if(selectedCalcId===id)selectedCalcId=null;await refresh();}}else if(a==='new-trip'||a==='blank-trip'){if(a==='blank-trip')draft=defaults();editing=null;tripEditMode=true;tripEditor=true;page='trips';pushNavigation();render();}else if(a==='edit-trip'){tripEditMode=false;const trip=trips.find(t=>String(t.id)===String(id));if(!trip)return alert('Рейс не найден.');draft={...defaults(),...trip};editing=trip.id;dashboardFilter='';statusFilter='Все';page='trips';tripEditor=true;pushNavigation();render();}else if(a==='begin-trip-edit'){tripEditMode=true;markTripChanged();render();document.querySelector('[data-field="client"]')?.focus();}else if(a==='save-trip'){if(editing&&!tripEditMode)return alert('Сначала нажмите «Внести изменения».');if(!draft.from.trim()||!draft.to.trim())return alert('Укажите пункты отправления и назначения.');if(editing&&normalizeStatus(trips.find(t=>t.id===editing)||{})==='Закрыт'&&draft.status==='Доставлен'&&canClose(draft)){draft.status='Закрыт';draft.closedAt=new Date().toISOString();}if(draft.status==='Закрыт'&&!canClose(draft))return alert('Рейс нельзя закрыть без документов и полной оплаты.');if(draft.status!=='Закрыт')delete draft.closedAt;const old=trips.find(t=>t.id===editing);const id2=editing||uid();await put('trips',{...draft,id:id2,number:old?.number||'ТР-'+String(Date.now()).slice(-8),createdAt:old?.createdAt||new Date().toISOString()});tripEditor=false;editing=null;tripEditMode=false;await refresh();}else if(a==='cancel-trip'){tripEditor=false;editing=null;render();}else if(a==='delete-trip'){if(confirm('Вы действительно хотите удалить этот рейс? Это действие нельзя отменить.')){await del('trips',id);tripEditor=false;editing=null;await refresh();}}else if(a==='export'){const data=JSON.stringify({version:1,exportedAt:new Date().toISOString(),trips,calculations},null,2);const blob=new Blob([data],{type:'application/json'});const url=URL.createObjectURL(blob);const link=document.createElement('a');link.href=url;link.download='transera-backup-'+new Date().toISOString().slice(0,10)+'.json';link.click();setTimeout(()=>URL.revokeObjectURL(url),1000);}}catch(err){alert('Ошибка сохранения: '+err.message);}});
 async function importJSON(file){try{const data=JSON.parse(await file.text());if(!Array.isArray(data.trips)||!Array.isArray(data.calculations)||data.version!==1)throw Error('Неверный формат резервной копии');if(!confirm('Импорт добавит записи в базу и заменит записи с совпадающими ID. Продолжить?'))return;for(const [name,items] of [['trips',data.trips],['calculations',data.calculations]])for(const item of items){if(!item||typeof item.id!=='string'||typeof item.mode!=='string')throw Error('Некорректная запись');await put(name,item);}await refresh();alert('Импорт завершён');}catch(err){alert('Ошибка импорта: '+err.message);}}
-openDB().then(x=>{db=x;refresh();}).catch(err=>{document.getElementById('content').innerHTML='<div class="card"><h1>Не удалось открыть базу данных</h1><p>'+esc(err.message)+'</p><p>Проверьте разрешения браузера и режим приватного просмотра.</p></div>';});
+openDB().then(x=>{db=x;refresh().then(()=>syncDownload());}).catch(err=>{document.getElementById('content').innerHTML='<div class="card"><h1>Не удалось открыть базу данных</h1><p>'+esc(err.message)+'</p><p>Проверьте разрешения браузера и режим приватного просмотра.</p></div>';});
 </script></body></html>
