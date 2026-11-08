@@ -313,7 +313,7 @@ document.addEventListener('click',async e=>{
   const result=await subscriptionApi('/payments/create',{plan:button.dataset.testPay});
   if(!result.test_mode||!/^https:\/\//.test(result.payment_url||''))throw Error('Сервер не подтвердил тестовый режим');
   const url=new URL(result.payment_url);
-  if(!['securepay.tinkoff.ru','securepay.tbank.ru'].includes(url.hostname))throw Error('Неожиданный домен платёжной страницы: '+url.hostname+'. Оплата не открыта.');
+  if(!['securepay.tinkoff.ru','securepay.tbank.ru','pay.tbank-online.com'].includes(url.hostname))throw Error('Неожиданный домен платёжной страницы: '+url.hostname+'. Оплата не открыта.');
   panel.textContent='Тестовый платёж создан. После оплаты вернитесь в личный кабинет и проверьте подписку.';
   window.open(url.href,'_blank','noopener,noreferrer');
  }catch(err){panel.textContent='Не удалось создать тестовый платёж: '+(err?.message||String(err));}
