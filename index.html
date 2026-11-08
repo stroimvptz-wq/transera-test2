@@ -233,23 +233,84 @@ const fleetSections=[['fleet-trucks','🚚','Собственный грузов
 let lastBackAt=0;
 function homePage(){return '<h2 class="home-title">Выбери раздел</h2><div class="home-sections">'+sections.map(([id,icon,label])=>'<button type="button" class="home-section" data-page="'+id+'"><span class="home-icon">'+icon+'</span><span>'+label+'</span><span class="home-arrow">›</span></button>').join('')+'</div>';}
 
-const localDocumentTypes=[['contract','Договор'],['ttn','ТТН'],['tn','Транспортная накладная (ТН)'],['act','Акт'],['invoice','Счёт'],['vat','Счёт-фактура']];
+const localDocumentTypes=[['contract','Договор'],['ttn','ТТН'],['tn','Транспортная накладная (ТН)'],['act','Акт'],['invoice','Счёт'],['vat','Счёт-фактура'],['upd','УПД']];
 let localDocumentType='contract',localDocumentId=null;
 function localDocumentKey(){return 'transera-local-documents:'+String(currentUser?.email||'guest').toLowerCase();}
 function localDocumentRead(){try{const x=JSON.parse(localStorage.getItem(localDocumentKey())||'[]');return Array.isArray(x)?x:[];}catch{return [];}}
 function localDocumentWrite(items){localStorage.setItem(localDocumentKey(),JSON.stringify(items));}
-const localDocumentFields=[['number','Номер документа'],['date','Дата','date'],['seller','Исполнитель / отправитель'],['sellerDetails','Реквизиты исполнителя'],['buyer','Заказчик / получатель'],['buyerDetails','Реквизиты заказчика'],['subject','Предмет договора / услуга / груз'],['route','Маршрут / место оказания услуги'],['vehicle','Транспортное средство / водитель'],['quantity','Количество'],['price','Цена, ₽'],['amount','Сумма, ₽'],['vat','НДС / основание без НДС'],['terms','Условия, примечания и подписи','textarea']];
+const localDocumentFields=[['number','Номер документа'],['date','Дата','date'],['seller','Исполнитель / грузоотправитель / продавец'],['sellerDetails','Адрес и реквизиты исполнителя'],['sellerInn','ИНН/КПП исполнителя'],['buyer','Заказчик / грузополучатель / покупатель'],['buyerDetails','Адрес и реквизиты заказчика'],['buyerInn','ИНН/КПП заказчика'],['subject','Наименование услуги / товара / груза'],['route','Маршрут / место оказания услуги'],['vehicle','Автомобиль, госномер'],['driver','Водитель, удостоверение'],['quantity','Количество'],['unit','Единица измерения'],['price','Цена за единицу, ₽'],['amount','Сумма, ₽'],['vat','Ставка НДС (например, Без НДС, 22%, 10%)'],['terms','Примечания и условия','textarea']];
+const localExtraFields={
+ invoice:[['bank','Банк получателя'],['bik','БИК'],['correspondent','Корреспондентский счёт'],['account','Расчётный счёт']],
+ vat:[['shipper','Грузоотправитель и адрес'],['consignee','Грузополучатель и адрес'],['paymentRef','К платёжно-расчётному документу'],['shipmentRef','Документ об отгрузке'],['productCode','Код вида товара'],['unitCode','Код единицы измерения'],['excise','Акциз'],['country','Страна происхождения'],['declaration','Регистрационный номер декларации']],
+ upd:[['shipper','Грузоотправитель и адрес'],['consignee','Грузополучатель и адрес'],['shipmentRef','Документ об отгрузке'],['status','Статус УПД (1 или 2)'],['transferBasis','Основание передачи'],['transferDate','Дата передачи'],['acceptDate','Дата приёмки'],['transferPerson','Передал: должность, ФИО'],['acceptPerson','Принял: должность, ФИО'],['transferInfo','Данные о транспортировке и грузе']],
+ ttn:[['payer','Плательщик, реквизиты'],['cargoPlaces','Количество грузовых мест'],['grossMass','Масса брутто, т'],['netMass','Масса нетто, т'],['package','Вид упаковки'],['loading','Пункт погрузки'],['unloading','Пункт разгрузки'],['trailer','Прицеп, госномер'],['waybill','Путевой лист №'],['deliveryDate','Срок доставки'],['attachments','Сопроводительные документы'],['loadingTime','Время погрузки'],['unloadingTime','Время разгрузки'],['distance','Расстояние, км']],
+ tn:[['forwarder','Заказчик организации перевозки (1а)'],['consignee','Грузополучатель'],['deliveryAddress','Адрес доставки'],['cargoPlaces','Количество грузовых мест'],['grossMass','Масса брутто, кг'],['netMass','Масса нетто, кг'],['package','Упаковка и маркировка'],['attachments','Сопроводительные документы'],['instructions','Особые условия перевозки'],['carrier','Перевозчик, реквизиты'],['ownership','Тип владения ТС'],['loading','Место погрузки'],['unloading','Место выгрузки'],['loadingTime','Дата и время погрузки'],['unloadingTime','Дата и время выгрузки'],['transferPerson','Лицо, сдавшее груз'],['acceptPerson','Лицо, принявшее груз'],['redirection','Переадресовка'],['remarks','Отметки и замечания'],['paymentBasis','Порядок расчёта платы']]
+};
+function localFieldsFor(type){return localDocumentFields.concat(localExtraFields[type]||[]);}
 function localDocumentEditor(){
  const record=localDocumentRead().find(x=>x.id===localDocumentId)||{};
  const label=localDocumentTypes.find(x=>x[0]===localDocumentType)?.[1]||'Документ';
- return '<div class="card section"><h3>'+esc(label)+'</h3><p class="muted">Черновик хранится только в браузере на этом устройстве. Для надёжного хранения скачайте файл на компьютер. Это универсальный шаблон: перед использованием проверьте обязательные реквизиты и форму документа.</p><form id="local-document-form" class="local-doc-form"><div class="fields">'+localDocumentFields.map(([key,title,kind])=>'<label>'+esc(title)+(kind==='textarea'?'<textarea name="'+key+'" rows="4">'+esc(record[key]||'')+'</textarea>':'<input name="'+key+'" type="'+(kind==='date'?'date':'text')+'" value="'+esc(record[key]||'')+'">')+'</label>').join('')+'</div><div class="actions"><button class="btn" type="submit">Сохранить черновик на устройстве</button><button class="btn secondary" type="button" data-local-doc-download>Скачать документ</button><button class="btn secondary" type="button" data-local-doc-print>Печать / PDF</button><button class="btn secondary" type="button" data-local-doc-close>Закрыть</button></div></form></div>';
+ return '<div class="card section"><h3>'+esc(label)+'</h3><p class="muted">Заполните реквизиты для печатной формы. Черновик хранится только на этом устройстве. Скачайте копию на компьютер. Перед подписанием проверьте заполнение и соответствие обязательной форме.</p><form id="local-document-form" class="local-doc-form"><div class="fields">'+localFieldsFor(localDocumentType).map(([key,title,kind])=>'<label>'+esc(title)+(kind==='textarea'?'<textarea name="'+key+'" rows="4">'+esc(record[key]||'')+'</textarea>':'<input name="'+key+'" type="'+(kind==='date'?'date':'text')+'" value="'+esc(record[key]||'')+'">')+'</label>').join('')+'</div><div class="actions"><button class="btn" type="submit">Сохранить черновик на устройстве</button><button class="btn secondary" type="button" data-local-doc-download>Скачать документ</button><button class="btn secondary" type="button" data-local-doc-print>Печать / PDF</button><button class="btn secondary" type="button" data-local-doc-close>Закрыть</button></div></form></div>';
 }
 function documentsPage(){
  return '<h2 class="home-title">Документы</h2><p class="muted">Договоры, перевозочные и бухгалтерские документы. Черновики хранятся локально в этом браузере и не отправляются на сервер ТрансЭра.РФ.</p><div class="local-doc-types">'+localDocumentTypes.map(([id,label])=>'<button type="button" class="local-doc-type" data-local-doc-new="'+id+'"><span>▤</span>'+esc(label)+'</button>').join('')+'</div>'+(localDocumentId!==null?localDocumentEditor():'')+'<div class="card section"><h3>Мои черновики на этом устройстве</h3><div class="local-doc-list">'+(localDocumentRead().map(x=>'<div class="local-doc-record"><span><strong>'+esc(localDocumentTypes.find(t=>t[0]===x.type)?.[1]||'Документ')+'</strong> № '+esc(x.number||'без номера')+' · '+esc(x.date||'без даты')+'</span><div class="actions"><button type="button" class="btn secondary" data-local-doc-open="'+esc(x.id)+'">Открыть</button><button type="button" class="btn secondary" data-local-doc-delete="'+esc(x.id)+'">Удалить</button></div></div>').join('')||'<p class="muted">Пока нет сохранённых черновиков.</p>')+'</div></div>';
 }
 function localDocumentData(){const f=document.getElementById('local-document-form');if(!f)return null;const data=Object.fromEntries(new FormData(f).entries());return {id:localDocumentId||uid(),type:localDocumentType,...data};}
 function localDocumentSave(data){const items=localDocumentRead();const i=items.findIndex(x=>x.id===data.id);if(i>=0)items[i]=data;else items.unshift(data);localDocumentWrite(items);localDocumentId=data.id;}
-function localDocumentHTML(data){const label=localDocumentTypes.find(x=>x[0]===data.type)?.[1]||'Документ';return '<!doctype html><html lang="ru"><head><meta charset="UTF-8"><title>'+esc(label)+'</title><style>body{font:16px Arial,sans-serif;max-width:850px;margin:40px auto;padding:20px;color:#222}h1{text-align:center}table{width:100%;border-collapse:collapse}td{padding:10px;border:1px solid #bbb;vertical-align:top}td:first-child{width:38%;background:#f6f6f6}pre{white-space:pre-wrap;font:inherit}</style></head><body><h1>'+esc(label)+' № '+esc(data.number||'—')+'</h1><p>Дата: '+esc(data.date||'—')+'</p><table>'+localDocumentFields.filter(([key])=>key!=='number'&&key!=='date').map(([key,title])=>'<tr><td>'+esc(title)+'</td><td><pre>'+esc(data[key]||'—')+'</pre></td></tr>').join('')+'</table><p>Подписи сторон: __________________________ / __________________________</p></body></html>';}
+
+function localDocumentHTML(d){
+ const v=k=>esc(d[k]||'—'),label=localDocumentTypes.find(x=>x[0]===d.type)?.[1]||'Документ';
+ const tr=(a,b)=>'<tr><td>'+a+'</td><td>'+b+'</td></tr>';
+ const table=(headers,rows)=>'<table><thead><tr>'+headers.map(h=>'<th>'+h+'</th>').join('')+'</tr></thead><tbody>'+rows.map(row=>'<tr>'+row.map(x=>'<td>'+x+'</td>').join('')+'</tr>').join('')+'</tbody></table>';
+ const heading=t=>'<h2 class="section-title">'+t+'</h2>';
+ const pair=(a,b)=>table(['',''],[[a,b]]);
+ const detail=fields=>table(['Реквизит','Значение'],fields.map(([name,key])=>[name,v(key)]));
+ const item=[['1',v('subject'),v('quantity'),v('unit'),v('price'),v('vat'),v('amount')]];
+ const goods=()=>table(['№','Наименование товара (услуги)','Кол-во','Ед.','Цена','НДС','Сумма'],item);
+ const signatures=()=>'<div class="signatures"><span>Передал / исполнитель ___________________</span><span>Принял / заказчик ___________________</span></div>';
+ const common='<p>№ '+v('number')+' от '+v('date')+'</p>';
+ let content='';
+ if(d.type==='invoice'){
+ content=table(['Банк получателя','БИК'],[[v('bank'),v('bik')],['Корр. счёт',v('correspondent')],['ИНН / КПП: '+v('sellerInn'),'Расч. счёт: '+v('account')],['Получатель',v('seller')]])+
+ '<h1>Счёт на оплату '+common+'</h1>'+detail([['Поставщик','seller'],['Реквизиты поставщика','sellerDetails'],['Покупатель','buyer'],['Реквизиты покупателя','buyerDetails']])+heading('Товары (услуги)')+goods()+'<p class="total">Всего к оплате: '+v('amount')+' ₽</p>'+signatures();
+ }else if(d.type==='vat'||d.type==='upd'){
+ content='<div class="small right">Приложение № 1 к постановлению Правительства РФ от 26.12.2011 № 1137<br>в редакции от 23.01.2026 № 26</div><h1>'+(d.type==='upd'?'УПД · Счёт-фактура':'Счёт-фактура')+' '+common+'</h1>'+
+ (d.type==='upd'?'<p>Статус: '+v('status')+'</p>':'')+
+ detail([['Продавец','seller'],['Адрес продавца','sellerDetails'],['ИНН/КПП продавца','sellerInn'],['Грузоотправитель','shipper'],['Грузополучатель','consignee'],['К платёжно-расчётному документу','paymentRef'],['Документ об отгрузке','shipmentRef'],['Покупатель','buyer'],['Адрес покупателя','buyerDetails'],['ИНН/КПП покупателя','buyerInn'],['Валюта','currency']])+
+ table(['№','Наименование товара / услуги','Код вида','Ед. изм.','Количество','Цена','Стоимость без налога','Акциз','Налоговая ставка','Сумма налога','Стоимость с налогом','Страна происхождения','Декларация'],
+ [['1',v('subject'),v('productCode'),v('unit'),v('quantity'),v('price'),v('amount'),v('excise'),v('vat'),'—',v('amount'),v('country'),v('declaration')]])+
+ '<p class="total">Всего к оплате: '+v('amount')+' ₽</p>'+signatures();
+ if(d.type==='upd')content+='<div class="page-break"></div>'+heading('УПД — сведения о передаче и приёмке')+
+ detail([['Основание передачи','transferBasis'],['Данные о транспортировке и грузе','transferInfo'],['Товар (груз) передал / услуги сдал','transferPerson'],['Дата передачи','transferDate'],['Товар (груз) получил / услуги принял','acceptPerson'],['Дата приёмки','acceptDate']])+signatures();
+ }else if(d.type==='ttn'){
+ content='<div class="small right">Типовая межотраслевая форма № 1-Т · ОКУД 0345009</div><h1>ТОВАРНО-ТРАНСПОРТНАЯ НАКЛАДНАЯ '+common+'</h1>'+
+ detail([['Грузоотправитель','seller'],['Адрес, реквизиты','sellerDetails'],['Грузополучатель','buyer'],['Адрес, реквизиты','buyerDetails'],['Плательщик','payer']])+heading('1. ТОВАРНЫЙ РАЗДЕЛ')+
+ table(['Код продукции','Количество','Цена, руб.','Наименование продукции (груза)','Ед. измерения','Вид упаковки','Кол-во мест','Масса, т','Сумма, руб.'],[['—',v('quantity'),v('price'),v('subject'),v('unit'),v('package'),v('cargoPlaces'),v('grossMass'),v('amount')]])+
+ detail([['Масса нетто, т','netMass'],['Сопроводительные документы','attachments']])+signatures()+
+ '<div class="page-break"></div><div class="small right">Оборотная сторона формы № 1-Т</div>'+heading('2. ТРАНСПОРТНЫЙ РАЗДЕЛ')+
+ detail([['Организация-перевозчик','seller'],['Заказчик (плательщик)','payer'],['Автомобиль и госномер','vehicle'],['Водитель','driver'],['Прицеп','trailer'],['Путевой лист №','waybill'],['Пункт погрузки','loading'],['Пункт разгрузки','unloading'],['Срок доставки','deliveryDate']])+
+ heading('СВЕДЕНИЯ О ГРУЗЕ')+table(['Груз','Документы','Упаковка','Мест','Масса брутто, т'],[[v('subject'),v('attachments'),v('package'),v('cargoPlaces'),v('grossMass')]])+
+ heading('ПОГРУЗОЧНО-РАЗГРУЗОЧНЫЕ ОПЕРАЦИИ')+table(['Операция','Пункт','Время'],[['Погрузка',v('loading'),v('loadingTime')],['Разгрузка',v('unloading'),v('unloadingTime')]])+
+ heading('ПРОЧИЕ СВЕДЕНИЯ')+detail([['Расстояние, км','distance'],['Стоимость перевозки, ₽','amount']])+signatures();
+ }else if(d.type==='tn'){
+ content='<div class="small right">Приложение № 4 к Правилам перевозок грузов автомобильным транспортом</div><h1>Транспортная накладная '+common+'</h1>'+
+ heading('1. Грузоотправитель')+detail([['Наименование','seller'],['Реквизиты','sellerDetails'],['1а. Заказчик организации перевозки','forwarder']])+
+ heading('2. Грузополучатель')+detail([['Наименование','consignee'],['Адрес доставки','deliveryAddress']])+
+ heading('3. Груз')+detail([['Наименование груза','subject'],['Количество грузовых мест','cargoPlaces'],['Упаковка, маркировка','package'],['Масса брутто, кг','grossMass'],['Масса нетто, кг','netMass']])+
+ heading('4. Сопроводительные документы на груз')+detail([['Документы','attachments']])+
+ heading('5. Указания грузоотправителя')+detail([['Особые условия','instructions']])+
+ heading('6. Перевозчик')+detail([['Перевозчик','carrier'],['Водитель','driver']])+
+ heading('7. Транспортное средство')+detail([['ТС, госномер','vehicle'],['Тип владения','ownership']])+
+ '<div class="page-break"></div>'+heading('8. Приём груза')+detail([['Место погрузки','loading'],['Дата и время','loadingTime'],['Сдал груз','transferPerson']])+
+ heading('9. Переадресовка')+detail([['Сведения о переадресовке','redirection']])+
+ heading('10. Выдача груза')+detail([['Место выгрузки','unloading'],['Дата и время','unloadingTime'],['Принял груз','acceptPerson']])+
+ heading('11. Отметки сторон')+detail([['Отметки и замечания','remarks']])+
+ heading('12. Стоимость перевозки груза')+detail([['Стоимость, ₽','amount'],['НДС','vat'],['Порядок расчёта','paymentBasis']])+signatures();
+ }else{
+ content='<h1>'+esc(label)+' '+common+'</h1>'+detail(localFieldsFor(d.type).filter(x=>x[0]!=='number'&&x[0]!=='date').map(x=>[esc(x[1]),x[0]]))+signatures();
+ }
+ return '<!doctype html><html lang="ru"><head><meta charset="UTF-8"><title>'+esc(label)+'</title><style>@page{size:A4 landscape;margin:9mm}body{font:11px Arial,sans-serif;color:#111;margin:0}h1{text-align:center;font-size:17px;margin:12px 0}h2{font-size:13px;margin:12px 0 4px;text-align:center}table{width:100%;border-collapse:collapse;table-layout:fixed;margin:5px 0 9px}th,td{border:1px solid #555;padding:5px 4px;overflow-wrap:anywhere;vertical-align:top}th{background:#eee;font-size:10px}.right{text-align:right}.small{font-size:9px}.total{text-align:right;font-weight:bold;font-size:13px}.signatures{display:flex;justify-content:space-between;gap:25px;margin:24px 0}.page-break{break-before:page;page-break-before:always}.section-title{background:#eee;border:1px solid #555;padding:5px}@media print{thead{display:table-header-group}tr{break-inside:avoid}body{print-color-adjust:exact;-webkit-print-color-adjust:exact}}</style></head><body>'+content+'</body></html>';
+}
 document.addEventListener('click',e=>{
  const newBtn=e.target.closest('[data-local-doc-new]'),open=e.target.closest('[data-local-doc-open]'),del=e.target.closest('[data-local-doc-delete]');
  if(newBtn){localDocumentType=newBtn.dataset.localDocNew;localDocumentId='';render();return;}
