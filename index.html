@@ -267,7 +267,7 @@ document.addEventListener('click',e=>{
 function transeraLockedPage(){
  const expired=transeraPreviewExpired||transeraAccess.state==='expired';
  const title=expired?'Срок действия подписки истёк':transeraAccess.state==='checking'?'Проверяем подписку':'Не удалось проверить подписку';
- const msg=expired?'Для продолжения работы с TRANSERA, пожалуйста, продлите подписку или активируйте промокод в личном кабинете. Все ваши рейсы и расчёты сохранены.':'Для защиты аккаунта рабочие разделы временно недоступны, пока не удастся подтвердить подписку.';
+ const msg=expired?'Для продолжения работы с ТрансЭра.РФ, пожалуйста, продлите подписку или активируйте промокод в личном кабинете. Все ваши рейсы и расчёты сохранены.':'Для защиты аккаунта рабочие разделы временно недоступны, пока не удастся подтвердить подписку.';
  return '<div class="card section" style="max-width:640px;margin:20px auto;text-align:center"><h2>🔒 '+title+'</h2><p class="muted">'+msg+'</p><div class="actions" style="justify-content:center"><button type="button" class="btn" data-page="account">Продлить подписку</button><button type="button" class="btn secondary" data-refresh-access>Проверить снова</button></div></div>';
 }
 document.addEventListener('click',e=>{if(e.target.closest('[data-refresh-access]')){void transeraRefreshAccess();}});
