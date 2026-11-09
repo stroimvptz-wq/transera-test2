@@ -512,6 +512,51 @@ document.addEventListener('submit',e=>{
 });
 
 function fleetPage(){return '<h2 class="home-title">Автопарк</h2><div class="home-sections">'+fleetSections.map(([id,icon,label])=>'<button type="button" class="home-section" data-page="'+id+'"><span class="home-icon">'+icon+'</span><span>'+label+'</span><span class="home-arrow">›</span></button>').join('')+'</div>';}
+
+/* TRANSERA test2 warehouse v1: isolated local-only stock and movement history. */
+let warehouseFilter='all';
+function warehouseKey(){return 'transera-warehouse-v1:'+String(currentUser?.email||'guest').toLowerCase();}
+function warehouseRead(){try{const x=JSON.parse(localStorage.getItem(warehouseKey())||'{"items":[],"moves":[]}');return {items:Array.isArray(x.items)?x.items:[],moves:Array.isArray(x.moves)?x.moves:[]};}catch{return {items:[],moves:[]};}}
+function warehouseSave(x){localStorage.setItem(warehouseKey(),JSON.stringify(x));}
+function warehouseNum(v){return Number(String(v||'').replace(',','.'));}
+function warehousePage(){
+ const x=warehouseRead(),stock=x.items.reduce((a,i)=>a+warehouseBalance(x,i.id),0),total=x.items.length,stored=x.items.filter(i=>warehouseBalance(x,i.id)>0).length;
+ const filtered=x.items.filter(i=>warehouseFilter==='all'||i.kind===warehouseFilter);
+ return '<h1>Склад</h1><p style="color:#64748b">Универсальный учёт грузов и товаров · данные сохраняются в этом браузере</p>'+
+ '<div class="stats" style="display:flex;gap:12px;flex-wrap:wrap;margin:18px 0">'+[['Позиций',total],['С остатком',stored],['Единиц на складе',Number(stock.toFixed(3))]].map(z=>'<div class="card" style="flex:1;min-width:145px"><div style="color:#64748b">'+z[0]+'</div><h2>'+z[1]+'</h2></div>').join('')+'</div>'+
+ '<div class="card"><h2>Новая позиция</h2><form id="warehouse-add" class="fields">'+
+ '<label>Тип<select name="kind"><option value="cargo">Груз</option><option value="goods">Товар</option></select></label>'+
+ '<label>Наименование<input name="name" required maxlength="160" placeholder="Например, шины 315/80 R22.5"></label>'+
+ '<label>Клиент / владелец<input name="owner" maxlength="160" placeholder="Компания или клиент"></label>'+
+ '<label>Единица<select name="unit"><option value="шт">шт</option><option value="мест">мест</option><option value="паллет">паллет</option><option value="кг">кг</option><option value="м³">м³</option></select></label>'+
+ '<label>Место хранения<input name="location" maxlength="100" placeholder="Склад, зона, стеллаж"></label>'+
+ '<label>Начальное количество<input name="quantity" type="number" min="0" step="any" value="0" required></label>'+
+ '<div><button class="btn primary" type="submit">Добавить позицию</button></div></form></div>'+
+ '<div class="card"><h2>Остатки</h2><div style="display:flex;gap:8px;flex-wrap:wrap;margin:10px 0">'+[['all','Все'],['cargo','Грузы'],['goods','Товары']].map(z=>'<button type="button" class="btn" data-warehouse-filter="'+z[0]+'" '+(warehouseFilter===z[0]?'style="font-weight:800"':'')+'>'+z[1]+'</button>').join('')+'</div>'+
+ (filtered.length?filtered.map(i=>{const balance=warehouseBalance(x,i.id);return '<div style="border-top:1px solid #e2e8f0;padding:14px 0"><div style="display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap"><div><strong>'+esc(i.name)+'</strong> <small>('+esc(i.kind==='cargo'?'Груз':'Товар')+')</small><div style="color:#64748b;font-size:13px">'+esc(i.owner||'Без владельца')+' · '+esc(i.location||'Место не указано')+'</div></div><strong>'+balance.toLocaleString('ru-RU')+' '+esc(i.unit)+'</strong></div>'+
+ '<form class="warehouse-move" data-warehouse-id="'+esc(i.id)+'" style="display:flex;gap:8px;flex-wrap:wrap;align-items:end;margin-top:10px"><label>Операция<select name="type"><option value="in">Приход</option><option value="out">Выдача / расход</option></select></label><label>Количество<input name="quantity" type="number" min="0.001" step="any" required style="max-width:120px"></label><label>Примечание<input name="note" maxlength="160" placeholder="Номер рейса или документ"></label><button class="btn" type="submit">Провести</button></form></div>';}).join(''):'<p>Пока нет позиций.</p>')+'</div>'+
+ '<div class="card"><h2>История операций</h2>'+(x.moves.length?x.moves.slice().reverse().slice(0,50).map(m=>{const i=x.items.find(z=>z.id===m.itemId);return '<div style="padding:9px 0;border-top:1px solid #e2e8f0"><strong>'+esc(m.type==='in'?'Приход':'Выдача')+'</strong> · '+esc(i?.name||'Позиция')+' · '+esc(String(m.quantity))+' '+esc(i?.unit||'')+'<div style="font-size:12px;color:#64748b">'+esc(m.date||'')+(m.note?' · '+esc(m.note):'')+'</div></div>';}).join(''):'<p>Операций пока нет.</p>')+'</div>';
+}
+function warehouseBalance(x,id){return x.moves.filter(m=>m.itemId===id).reduce((n,m)=>n+(m.type==='in'?1:-1)*Number(m.quantity||0),0);}
+document.addEventListener('submit',e=>{
+ if(e.target.id!=='warehouse-add'&&!e.target.classList.contains('warehouse-move'))return;
+ e.preventDefault();const f=e.target,x=warehouseRead(),q=warehouseNum(f.elements.quantity.value);
+ if(!Number.isFinite(q)||q<0||(f.classList.contains('warehouse-move')&&q===0)){alert('Укажите корректное количество.');return;}
+ if(f.id==='warehouse-add'){
+  const name=f.elements.name.value.trim();if(!name){alert('Укажите наименование.');return;}
+  const id=typeof crypto!=='undefined'&&crypto.randomUUID?crypto.randomUUID():String(Date.now())+'-'+Math.random();
+  x.items.push({id,kind:f.elements.kind.value,name,owner:f.elements.owner.value.trim(),unit:f.elements.unit.value,location:f.elements.location.value.trim()});
+  if(q>0)x.moves.push({itemId:id,type:'in',quantity:q,note:'Начальный остаток',date:new Date().toLocaleString('ru-RU')});
+ }else{
+  const id=f.dataset.warehouseId,type=f.elements.type.value;
+  if(!x.items.some(i=>i.id===id))return;
+  if(type==='out'&&q>warehouseBalance(x,id)+0.0000001){alert('Недостаточно остатка для выдачи.');return;}
+  x.moves.push({itemId:id,type,quantity:q,note:f.elements.note.value.trim(),date:new Date().toLocaleString('ru-RU')});
+ }
+ try{warehouseSave(x);render();}catch{alert('Не удалось сохранить данные склада. Проверьте свободное место браузера.');}
+});
+document.addEventListener('click',e=>{const b=e.target.closest('[data-warehouse-filter]');if(b){warehouseFilter=b.dataset.warehouseFilter;render();}});
+
 function placeholderPage(){const item=sections.concat(documentSections,fleetSections).find(x=>x[0]===page);return '<h1>'+esc(item?.[2]||'Раздел')+'</h1><div class="card">Этот раздел пока в разработке. Его функции подключим позже.</div>';}
 function initNavigation(){history.replaceState({transera:true,page:'exit'},'','#home');history.pushState({transera:true,page:'home'},'','#home');}
 function pushNavigation(){history.pushState({transera:true,page,tripEditor:!!tripEditor,editing},'','#'+(tripEditor?'trip':page));}
@@ -540,7 +585,7 @@ function transeraLockedPage(){
  return '<div class="card section" style="max-width:640px;margin:20px auto;text-align:center"><h2>'+(transeraAccess.state==='checking'?'⏳ ':'🔒 ')+title+'</h2><p class="muted">'+msg+'</p>'+(transeraAccess.state==='checking'?'':'<div class="actions" style="justify-content:center"><button type="button" class="btn" data-page="account">Продлить подписку</button><button type="button" class="btn secondary" data-refresh-access>Проверить снова</button></div>')+'</div>';
 }
 document.addEventListener('click',e=>{if(e.target.closest('[data-refresh-access]')){void transeraRefreshAccess();}});
-function render(){renderSidebarStats();document.querySelectorAll('.nav').forEach(b=>b.classList.toggle('active',b.dataset.page===page));document.getElementById('content').innerHTML=((page!=='home'&&page!=='account'&&!transeraAccessAllowed())?transeraLockedPage():page==='home'?homePage():page==='dashboard'?dashboard():page==='calculators'?calculators():page==='trips'?tripsPage():page==='account'?accountPage():page==='documents'?documentsPage():page==='fleet'?fleetPage():(page==='fleet-trucks'||page==='taxi')?fleetWorkspace():placeholderPage());if(page!=='home')document.getElementById('content').insertAdjacentHTML('afterbegin','<div class="page-navigation"><button type="button" class="back-to-home" data-go-home>⌂ Главная</button><button type="button" class="back-to-home" data-go-back>‹ Назад</button></div>');}
+function render(){renderSidebarStats();document.querySelectorAll('.nav').forEach(b=>b.classList.toggle('active',b.dataset.page===page));document.getElementById('content').innerHTML=((page!=='home'&&page!=='account'&&!transeraAccessAllowed())?transeraLockedPage():page==='home'?homePage():page==='dashboard'?dashboard():page==='calculators'?calculators():page==='trips'?tripsPage():page==='account'?accountPage():page==='documents'?documentsPage():page==='warehouse'?warehousePage():page==='fleet'?fleetPage():(page==='fleet-trucks'||page==='taxi')?fleetWorkspace():placeholderPage());if(page!=='home')document.getElementById('content').insertAdjacentHTML('afterbegin','<div class="page-navigation"><button type="button" class="back-to-home" data-go-home>⌂ Главная</button><button type="button" class="back-to-home" data-go-back>‹ Назад</button></div>');}
 function setPage(p){if(p!==page){fleetSection='';fleetVehicle='';fleetMetric='';}if(page===p&&!tripEditor)return;if(p!=='home'&&p!=='account'&&!transeraAccessAllowed()){page=p;tripEditor=false;editing=null;pushNavigation();render();return;}page=p;tripEditor=false;editing=null;pushNavigation();render();}
 function goBack(){history.back();}
 async function goHomeSafely(){if(page==='home')return;const original=editing?trips.find(t=>t.id===editing):null;const dirty=tripEditor&&(editing?JSON.stringify(draft)!==JSON.stringify({...defaults(),...original}):JSON.stringify(draft)!==JSON.stringify(defaults()));if(dirty){if(confirm('Есть несохранённые изменения рейса. Сохранить их перед переходом на главную?')){if(!draft.from?.trim()||!draft.to?.trim())return alert('Для сохранения укажите пункты отправления и назначения.');if(editing&&normalizeStatus(original||{})==='Закрыт'&&draft.status==='Доставлен'&&canClose(draft)){draft.status='Закрыт';draft.closedAt=new Date().toISOString();}if(draft.status==='Закрыт'&&!canClose(draft))return alert('Нельзя сохранить закрытый рейс с задолженностью или без документов.');if(draft.status!=='Закрыт')delete draft.closedAt;try{await put('trips',{...draft,id:editing||uid(),number:original?.number||'ТР-'+String(Date.now()).slice(-8),createdAt:original?.createdAt||new Date().toISOString()});trips=await all('trips');}catch(err){return alert('Не удалось сохранить рейс: '+err.message);}}else if(!confirm('Перейти на главную без сохранения изменений?'))return;}else if(page==='calculators'&&JSON.stringify(draft)!==JSON.stringify(defaults())&&!selectedCalcId){if(confirm('Сохранить текущий расчёт перед переходом на главную?')){try{await put('calculations',{...draft,id:uid(),createdAt:new Date().toISOString()});calculations=await all('calculations');}catch(err){return alert('Не удалось сохранить расчёт: '+err.message);}}else if(!confirm('Перейти без сохранения расчёта?'))return;}else if(page==='account'&&editingProfile){return alert('В личном кабинете сначала сохраните изменения профиля или нажмите «Отмена».');}tripEditor=false;editing=null;tripEditMode=false;page='home';pushNavigation();render();}
