@@ -167,7 +167,7 @@ async function refresh(){trips=await all('trips');calculations=await all('calcul
 const field=(key,label,type='number',opts=null)=>'<label>'+label+(opts?'<select data-field="'+key+'">'+opts.map(o=>'<option value="'+esc(o[0])+'" '+(String(draft[key])===String(o[0])?'selected':'')+'>'+esc(o[1])+'</option>').join('')+'</select>':'<input data-field="'+key+'" type="'+(type==='number'?'text':type)+'" '+(type==='number'?'inputmode="decimal" data-numeric="1" autocomplete="off"':'')+' value="'+esc(type==='number'&&Number(draft[key])===0?'':draft[key])+'" placeholder="'+(type==='number'?'0':'')+'">')+'</label>';
 
 /* Test-only approximate route reference; offline, not verified road routing */
-const routeCityPairs=[["Петрозаводск","Санкт-Петербург",412]];
+const routeCityPairs=[["Петрозаводск","Санкт-Петербург",422]];
 const routeCityNames=["Архангельск","Брянск","Великий Новгород","Владимир","Вологда","Казань","Калуга","Кострома","Москва","Мурманск","Нижний Новгород","Петрозаводск","Псков","Рязань","Санкт-Петербург","Смоленск","Тверь","Тула","Череповец","Ярославль"];
 const routeNorm=s=>String(s||'').trim().toLocaleLowerCase('ru').replace(/ё/g,'е');
 function routeDistance(from,to){const a=routeNorm(from),b=routeNorm(to);const pair=routeCityPairs.find(p=>(routeNorm(p[0])===a&&routeNorm(p[1])===b)||(routeNorm(p[0])===b&&routeNorm(p[1])===a));return pair?pair[2]:null;}
