@@ -200,7 +200,7 @@ function routeAutoFill(){
  if(!note&&distance.closest('label')){note=document.createElement('small');note.className='route-km-note';note.style.cssText='display:block;font-size:11px;margin-top:4px;opacity:.75';distance.closest('label').appendChild(note);}
  if(!result){if(note)note.textContent='';return;}
  const km=String(result.km);
- if(note)note.textContent=result.estimated?'≈ Приблизительно, не по дорожной карте':'По сохранённому направлению';
+ if(note)note.textContent='';
  if(String(draft.distance)===km)return;
  draft.distance=km;distance.value=km;
  const live=document.getElementById('live-results');if(live)live.outerHTML=results(!tripEditor);
