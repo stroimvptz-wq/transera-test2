@@ -418,19 +418,9 @@ async function transeraRefreshAccess(){
  if(transeraAccess.state!=='active'&&page!=='account'&&page!=='home'){page='account';tripEditor=false;editing=null;}
  render();
 }
-// Local preview only: never changes the subscription stored in Yandex Cloud.
-let transeraPreviewExpired=false;
-function transeraAccessAllowed(){return !transeraPreviewExpired&&transeraAccess.state==='active';}
-function transeraPreviewControls(){
- return '<div class="card section" style="margin:12px 0;border:1px dashed #168dab"><strong>Проверка подписки (только test2)</strong><p class="muted">Эта кнопка не меняет срок подписки и не списывает деньги.</p><button type="button" class="btn secondary" data-preview-expired>'+ (transeraPreviewExpired?'Вернуть обычный режим':'Показать истёкшую подписку')+'</button></div>';
-}
-document.addEventListener('click',e=>{
- if(!e.target.closest('[data-preview-expired]'))return;
- transeraPreviewExpired=!transeraPreviewExpired;
- page='account';tripEditor=false;editing=null;render();
-});
+function transeraAccessAllowed(){return transeraAccess.state==='active';}
 function transeraLockedPage(){
- const expired=transeraPreviewExpired||transeraAccess.state==='expired';
+ const expired=transeraAccess.state==='expired';
  const title=expired?'Срок действия подписки истёк':transeraAccess.state==='checking'?'Загружаем данные':'Не удалось проверить подписку';
  const msg=expired?'Для продолжения работы с ТрансЭра.РФ, пожалуйста, продлите подписку или активируйте промокод в личном кабинете. Все ваши рейсы и расчёты сохранены.':transeraAccess.state==='checking'?'Подождите несколько секунд, открываем ваш кабинет.':'Для защиты аккаунта рабочие разделы временно недоступны, пока не удастся подтвердить подписку.';
  return '<div class="card section" style="max-width:640px;margin:20px auto;text-align:center"><h2>'+(transeraAccess.state==='checking'?'⏳ ':'🔒 ')+title+'</h2><p class="muted">'+msg+'</p>'+(transeraAccess.state==='checking'?'':'<div class="actions" style="justify-content:center"><button type="button" class="btn" data-page="account">Продлить подписку</button><button type="button" class="btn secondary" data-refresh-access>Проверить снова</button></div>')+'</div>';
