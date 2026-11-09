@@ -563,10 +563,13 @@ function warehouseRead(){try{const x=JSON.parse(localStorage.getItem(warehouseKe
 function warehouseSave(x){localStorage.setItem(warehouseKey(),JSON.stringify(x));}
 function warehouseNum(v){return Number(String(v||'').replace(',','.'));}
 function warehousePage(){
- const x=warehouseRead(),stock=x.items.reduce((a,i)=>a+warehouseBalance(x,i.id),0),total=x.items.length,stored=x.items.filter(i=>warehouseBalance(x,i.id)>0).length;
+ const x=warehouseRead(),total=x.items.length,stored=x.items.filter(i=>warehouseBalance(x,i.id)>0).length;
+ const stockByUnit=new Map();
+ x.items.forEach(i=>{const balance=warehouseBalance(x,i.id);if(balance>0){const unit=String(i.unit||'ед.');stockByUnit.set(unit,(stockByUnit.get(unit)||0)+balance);}});
+ const stockSummary=Array.from(stockByUnit,([unit,quantity])=>Number(quantity.toFixed(3)).toLocaleString('ru-RU')+' '+unit).join(' · ')||'0';
  const filtered=x.items.filter(i=>warehouseFilter==='all'||i.kind===warehouseFilter);
  return '<h1>Склад</h1><p style="color:#64748b">Универсальный учёт грузов и товаров · данные сохраняются в этом браузере</p>'+
- '<div class="stats" style="display:flex;gap:12px;flex-wrap:wrap;margin:18px 0">'+[['Позиций',total],['С остатком',stored],['Единиц на складе',Number(stock.toFixed(3))]].map(z=>'<button type="button" class="card warehouse-tile" data-warehouse-jump="warehouse-stock" style="flex:1;min-width:145px"><div style="color:#64748b">'+z[0]+'</div><h2>'+z[1]+'</h2></button>').join('')+'</div>'+
+ '<div class="stats" style="display:flex;gap:12px;flex-wrap:wrap;margin:18px 0">'+[['Позиций',total],['С остатком',stored],['Единиц на складе',stockSummary]].map(z=>'<button type="button" class="card warehouse-tile" data-warehouse-jump="warehouse-stock" style="flex:1;min-width:145px"><div style="color:#64748b">'+z[0]+'</div><h2>'+z[1]+'</h2></button>').join('')+'</div>'+
  '<div class="card warehouse-panel"><h2>Новая позиция</h2><form id="warehouse-add" class="fields">'+
  '<label>Тип<select name="kind"><option value="cargo">Груз</option><option value="goods">Товар</option></select></label>'+
  '<label>Наименование<input name="name" required maxlength="160" placeholder="Например, шины 315/80 R22.5"></label>'+
