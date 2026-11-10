@@ -253,7 +253,7 @@ function blankTransport(s,d){
  const sign=(name,caption,keys)=>mixed([name,'____________________'].filter(Boolean).join('\n'),caption,keys);
  // The appendix header is text, not an image or a third-party watermark.
  const header=['Приложение № 4','к Правилам перевозок грузов автомобильным транспортом,','утверждённым постановлением Правительства РФ от 21.12.2020 № 2200','(в ред. Постановления Правительства РФ от 30.11.2021 № 2116)'];
- header.forEach((text,i)=>s.text(text,s.w-s.margin,s.y+2+i*2.15,5.2,'right'));s.y+=11;s.center('Транспортная накладная (форма)',12.5);
+ header.forEach((text,i)=>s.text(text,s.w-s.margin,s.y+2+i*2.15,5.2,'right'));s.y+=11;s.center('Транспортная накладная',12.5);
  row([mixed('Транспортная накладная','',[],1.6),mixed('Заказ (заявка)','',[])],5);
  row([mixed('Дата','',[],.07),mixed(blankGet(d,'date'),'',['date'],.12),mixed('№','',[],.06),mixed(d.number||'________________','',['number'],.365),mixed('Дата','',[],.07),mixed(blankGet(d,'orderDate'),'',['orderDate'],.115),mixed('№','',[],.05),mixed(d.orderNumber||'________','',['orderNumber'],.15)],6);
  row([mixed('Экземпляр №','',[],.185),mixed(d.copyNumber||'1','',['copyNumber'],.43),mixed('','',[],.385)],4.5);
