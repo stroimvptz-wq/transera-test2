@@ -42,3 +42,5 @@ html[data-theme] .champagne-tile:not(:disabled):hover{box-shadow:var(--tile-shad
 /* Keep the left reserved space empty; navigation lives in the main menu. */
 html[data-theme] .sidebar{background:var(--canvas);border-right:0}
 html[data-theme] .sidebar>*{display:none!important}
+
+.champagne-topbar .champagne-wordmark{flex-direction:column;align-items:flex-start;gap:3px;letter-spacing:-.3px}.champagne-wordmark-line{display:flex;align-items:center;gap:9px}.champagne-brand-slogan{font-size:11px;line-height:1.4;font-weight:400;letter-spacing:0;color:var(--muted);padding-left:33px}@media(max-width:520px){.champagne-brand-slogan{font-size:10px;padding-left:30px}}
