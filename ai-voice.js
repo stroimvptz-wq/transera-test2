@@ -7,23 +7,23 @@
  function note(message){status=message;document.querySelectorAll('[data-ai-voice-status]').forEach(x=>x.textContent=message);}
  function stopInput(){session++;const old=recognition;recognition=null;try{old?.abort();}catch{}updateButtons();}
  function stopSpeech(){session++;speechQueue=[];utterance=null;speaking=false;synthesis?.cancel();updateButtons();}
- function updateButtons(){document.querySelectorAll('[data-ai-mic]').forEach(b=>{b.textContent=recognition?'■ Остановить запись':'🎙 Надиктовать';b.setAttribute('aria-pressed',String(!!recognition));});document.querySelectorAll('[data-ai-speech-stop]').forEach(b=>b.hidden=!speaking);}
+ function updateButtons(){document.querySelectorAll('[data-ai-mic]').forEach(b=>{b.textContent=b.hasAttribute('data-ai-chat-mic')?(recognition?'■':'🎙'):(recognition?'■ Остановить запись':'🎙 Надиктовать');b.setAttribute('aria-pressed',String(!!recognition));});document.querySelectorAll('[data-ai-speech-stop]').forEach(b=>b.hidden=!speaking);}
  function enhance(){
   const root=document.querySelector('.ai-page');if(!root){if(recognition)stopInput();if(speaking)stopSpeech();return;}
   const form=root.querySelector('#ai-task-form');
   if(form&&!form.querySelector('[data-ai-voice-controls]')){
-   const controls=document.createElement('div');controls.dataset.aiVoiceControls='';controls.className='ai-voice-controls';
-   const button=document.createElement('button');button.type='button';button.className='btn secondary';button.dataset.aiMic='';button.disabled=!Recognition;button.title=Recognition?'Надиктовать сообщение. Браузер запросит доступ к микрофону.':'В этом браузере распознавание речи недоступно.';controls.append(button);
-   const listen=document.createElement('button');listen.type='button';listen.className='btn secondary';listen.dataset.aiListenDraft='';listen.textContent='▶ Прослушать мой текст';listen.disabled=!synthesis;controls.append(listen);
-   const stop=document.createElement('button');stop.type='button';stop.className='btn secondary';stop.dataset.aiSpeechStop='';stop.textContent='■ Остановить';controls.append(stop);
+   const inline=!!form.closest('.ai-chat-main');const controls=document.createElement('div');controls.dataset.aiVoiceControls='';controls.className='ai-voice-controls'+(inline?' ai-chat-inline-voice':'');
+   const button=document.createElement('button');button.type='button';button.className='btn secondary';button.dataset.aiMic='';button.disabled=!Recognition;button.title=Recognition?'Надиктовать сообщение. Браузер запросит доступ к микрофону.':'В этом браузере распознавание речи недоступно.';if(inline){button.dataset.aiChatMic='';button.setAttribute('aria-label','Надиктовать сообщение');}controls.append(button);
+   const listen=document.createElement('button');listen.type='button';listen.className='btn secondary';listen.dataset.aiListenDraft='';listen.textContent=inline?'🔊':'▶ Прослушать мой текст';listen.title='Прослушать текст сообщения';listen.setAttribute('aria-label','Прослушать текст сообщения');listen.disabled=!synthesis;controls.append(listen);
+   const stop=document.createElement('button');stop.type='button';stop.className='btn secondary';stop.dataset.aiSpeechStop='';stop.textContent=inline?'■':'■ Остановить';stop.title='Остановить прослушивание';stop.setAttribute('aria-label','Остановить прослушивание');controls.append(stop);
    const action=form.querySelector('[name="ai-action"]');if(action&&Array.from(action.options).some(x=>x.value==='Кратко изложи содержание приложенного файла')){const summarize=document.createElement('button');summarize.type='button';summarize.className='btn secondary';summarize.dataset.aiExplainFile='';summarize.textContent='Объяснить содержимое документа';controls.append(summarize);}
-   const text=document.createElement('span');text.dataset.aiVoiceStatus='';text.setAttribute('role','status');text.textContent=status||(!Recognition?'Голосовой ввод не поддерживается этим браузером.':'Речь распознаёт браузер; текст можно проверить перед отправкой.');controls.append(text);form.append(controls);
+   const text=document.createElement('span');text.dataset.aiVoiceStatus='';text.setAttribute('role','status');text.textContent=status||(!Recognition?'Голосовой ввод не поддерживается этим браузером.':inline?'':'Речь распознаёт браузер; текст можно проверить перед отправкой.');if(inline){form.querySelector('.ai-chat-compose-actions').prepend(controls);text.className='ai-chat-voice-status';form.append(text);}else{controls.append(text);form.append(controls);}
   }
   root.querySelectorAll('.ai-message-assistant,.ai-result-text').forEach(node=>{
    if(node.querySelector('[data-ai-speak]'))return;
    const controls=document.createElement('div');controls.className='ai-voice-controls';
    const button=document.createElement('button');button.type='button';button.className='btn secondary';button.dataset.aiSpeak='';button.textContent='▶ Прослушать';button.disabled=!synthesis;controls.append(button);
-   const stop=document.createElement('button');stop.type='button';stop.className='btn secondary';stop.dataset.aiSpeechStop='';stop.textContent='■ Остановить';controls.append(stop);node.append(controls);
+   const stop=document.createElement('button');stop.type='button';stop.className='btn secondary';stop.dataset.aiSpeechStop='';stop.textContent='■ Остановить';stop.title='Остановить прослушивание';stop.setAttribute('aria-label','Остановить прослушивание');controls.append(stop);node.append(controls);
   });updateButtons();
  }
  function dictate(){
