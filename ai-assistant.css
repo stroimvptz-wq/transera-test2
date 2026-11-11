@@ -30,3 +30,5 @@
 .ai-tools{grid-template-columns:repeat(2,minmax(0,1fr));max-width:900px;margin-inline:auto}
 
 .ai-chat-check-result{white-space:pre-wrap;overflow-wrap:anywhere}
+
+.ai-chat-compose-actions>.ai-chat-send{display:grid;place-items:center;width:46px;min-width:46px;height:46px;min-height:46px;padding:0;border-radius:50%;box-shadow:0 3px 12px #0003}.ai-chat-send[aria-busy=true] svg{opacity:.5}.ai-image-prompt{position:relative}.ai-image-prompt textarea{padding-bottom:65px}.ai-image-mic{position:absolute;right:12px;bottom:12px;margin:0}.ai-image-mic .btn{display:grid;place-items:center;width:44px;height:44px;padding:0;border-radius:50%;font-size:20px}.ai-image-send{min-height:46px}
