@@ -14,6 +14,9 @@
   if(form&&!form.querySelector('[data-ai-voice-controls]')){
    const controls=document.createElement('div');controls.dataset.aiVoiceControls='';controls.className='ai-voice-controls';
    const button=document.createElement('button');button.type='button';button.className='btn secondary';button.dataset.aiMic='';button.disabled=!Recognition;button.title=Recognition?'Надиктовать сообщение. Браузер запросит доступ к микрофону.':'В этом браузере распознавание речи недоступно.';controls.append(button);
+   const listen=document.createElement('button');listen.type='button';listen.className='btn secondary';listen.dataset.aiListenDraft='';listen.textContent='▶ Прослушать мой текст';listen.disabled=!synthesis;controls.append(listen);
+   const stop=document.createElement('button');stop.type='button';stop.className='btn secondary';stop.dataset.aiSpeechStop='';stop.textContent='■ Остановить';controls.append(stop);
+   const action=form.querySelector('[name="ai-action"]');if(action&&Array.from(action.options).some(x=>x.value==='Кратко изложи содержание приложенного файла')){const summarize=document.createElement('button');summarize.type='button';summarize.className='btn secondary';summarize.dataset.aiExplainFile='';summarize.textContent='Объяснить содержимое документа';controls.append(summarize);}
    const text=document.createElement('span');text.dataset.aiVoiceStatus='';text.setAttribute('role','status');text.textContent=status||(!Recognition?'Голосовой ввод не поддерживается этим браузером.':'Речь распознаёт браузер; текст можно проверить перед отправкой.');controls.append(text);form.append(controls);
   }
   root.querySelectorAll('.ai-message-assistant,.ai-result-text').forEach(node=>{
@@ -37,15 +40,17 @@
   r.onend=()=>{if(my!==session)return;recognition=null;if(status.startsWith('Слушаю'))note('Запись завершена. Проверьте текст и нажмите «Отправить».');updateButtons();};
   try{r.start();updateButtons();}catch{recognition=null;note('Не удалось включить микрофон. Проверьте разрешения браузера.');updateButtons();}
  }
- function speak(node){
+ function speak(node,plainText){
   if(!synthesis)return;stopInput();stopSpeech();const my=++session;
-  const copy=node.cloneNode(true);copy.querySelectorAll('.ai-voice-controls,strong').forEach(x=>x.remove());const text=copy.textContent.trim();if(!text)return;
+  let text=plainText;if(text===undefined){const copy=node.cloneNode(true);copy.querySelectorAll('.ai-voice-controls,strong').forEach(x=>x.remove());text=copy.textContent;}text=String(text||'').trim();if(!text){note('Сначала введите или надиктуйте текст.');return;}
   const voices=synthesis.getVoices();const russian=voices.find(v=>/^ru(?:-|_)/i.test(v.lang));
   if(!russian){note('На устройстве нет русского голоса. Добавьте русский голос в настройках речи устройства и попробуйте снова.');return;}
   speechQueue=text.match(/[\s\S]{1,220}(?:\s|$)|[\s\S]{1,220}/g)||[text];speaking=true;note('Читаю ответ вслух…');updateButtons();
   function next(){if(my!==session)return;if(!speechQueue.length){speaking=false;note('Чтение завершено.');updateButtons();return;}utterance=new SpeechSynthesisUtterance(speechQueue.shift());utterance.lang='ru-RU';utterance.voice=russian;utterance.rate=1;utterance.onend=next;utterance.onerror=e=>{if(my!==session)return;speaking=false;speechQueue=[];note('Не удалось озвучить ответ. Проверьте настройки звука устройства.');updateButtons();};synthesis.speak(utterance);}next();
  }
  document.addEventListener('click',e=>{
+  if(e.target.closest('[data-ai-listen-draft]')){speak(null,document.querySelector('.ai-page [name="ai-prompt"]')?.value);return;}
+  if(e.target.closest('[data-ai-explain-file]')){const form=document.querySelector('#ai-task-form'),input=form?.querySelector('[name="ai-prompt"]'),action=form?.querySelector('[name="ai-action"]');if(!input)return;action.value='Кратко изложи содержание приложенного файла';action.dispatchEvent(new Event('change',{bubbles:true}));input.value='Объясни простыми словами содержание приложенного документа. Выдели важные сроки, суммы и обязательства. Подготовь связный рассказ, который удобно слушать вслух.';input.dispatchEvent(new Event('input',{bubbles:true}));const send=form.querySelector('[type=submit]');if(send&&!send.disabled)form.requestSubmit();else note('Для объяснения документа нужен доступный AI-лимит. После получения ответа нажмите «Прослушать».');return;}
   if(e.target.closest('[data-ai-mic]')){dictate();return;}
   const button=e.target.closest('[data-ai-speak]');if(button){speak(button.closest('.ai-message-assistant,.ai-result-text'));return;}
   if(e.target.closest('[data-ai-speech-stop]')){stopSpeech();note('Чтение остановлено.');return;}
