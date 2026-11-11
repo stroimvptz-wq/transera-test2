@@ -30,23 +30,39 @@
   if(recognition){stopInput();note('Запись остановлена. Проверьте текст перед отправкой.');return;}
   const input=document.querySelector('.ai-page [name="ai-prompt"]');if(!input||input.disabled)return;
   if(!Recognition){note('Этот браузер не поддерживает голосовой ввод.');return;}
-  stopSpeech();const owner=String(currentUser?.email||''),mode=page,my=++session;const base=input.value.trim();let final='';
+  stopSpeech();const owner=String(currentUser?.email||''),mode=page,my=++session;const base=input.value.trim();const segments=new Map();
   const r=new Recognition();recognition=r;r.lang='ru-RU';r.continuous=true;r.interimResults=true;
   r.onstart=()=>{if(my===session){note('Слушаю… Нажмите «Остановить запись», когда закончите.');updateButtons();}};
-  r.onresult=e=>{if(my!==session||page!==mode||String(currentUser?.email||'')!==owner)return;let interim='';for(let i=e.resultIndex;i<e.results.length;i++){if(e.results[i].isFinal)final+=e.results[i][0].transcript+' ';else interim+=e.results[i][0].transcript;}
-   const target=document.querySelector('.ai-page [name="ai-prompt"]');if(!target)return;target.value=[base,final.trim(),interim].filter(Boolean).join(' ').slice(0,target.maxLength>0?target.maxLength:6000);target.dispatchEvent(new Event('input',{bubbles:true}));
+  r.onresult=e=>{if(my!==session||page!==mode||String(currentUser?.email||'')!==owner)return;for(const key of segments.keys())if(key>=e.results.length)segments.delete(key);for(let i=e.resultIndex;i<e.results.length;i++){segments.set(i,String(e.results[i][0].transcript||'').trim());}const transcript=[...segments.entries()].sort((a,b)=>a[0]-b[0]).map(([,text])=>text).filter(Boolean).join(' ');
+   const target=document.querySelector('.ai-page [name="ai-prompt"]');if(!target)return;target.value=[base,transcript].filter(Boolean).join(' ').slice(0,target.maxLength>0?target.maxLength:6000);target.dispatchEvent(new Event('input',{bubbles:true}));
   };
   r.onerror=e=>{if(my!==session)return;recognition=null;const messages={'not-allowed':'Доступ к микрофону запрещён. Разрешите его в настройках сайта рядом с адресом.','audio-capture':'Микрофон не найден или занят другим приложением.','network':'Сервис распознавания браузера недоступен. Попробуйте другой браузер или введите текст.','no-speech':'Речь не услышана. Нажмите микрофон и попробуйте снова.','service-not-allowed':'Браузер не разрешает распознавание речи.'};note(messages[e.error]||'Не удалось распознать речь. Попробуйте ещё раз.');updateButtons();};
   r.onend=()=>{if(my!==session)return;recognition=null;if(status.startsWith('Слушаю'))note('Запись завершена. Проверьте текст и нажмите «Отправить».');updateButtons();};
   try{r.start();updateButtons();}catch{recognition=null;note('Не удалось включить микрофон. Проверьте разрешения браузера.');updateButtons();}
  }
+
+ function speechText(value){return String(value||'')
+  .replace(/```[\s\S]*?```/g,' Фрагмент кода. ')
+  .replace(/!\[([^\]]*)\]\([^)]*\)/g,'$1')
+  .replace(/\[([^\]]+)\]\([^)]*\)/g,'$1')
+  .replace(/https?:\/\/\S+/g,' ссылка ')
+  .replace(/^\s{0,3}#{1,6}\s+/gm,'')
+  .replace(/^\s*(?:[-*+]|\d+[.)])\s+/gm,'')
+  .replace(/[*_`~#|]/g,'')
+  .replace(/\n{2,}/g,'. ')
+  .replace(/\n/g,' ')
+  .replace(/([.!?])\s*[.!?]+/g,'$1')
+  .replace(/\s+([,.;:!?])/g,'$1')
+  .replace(/\s+/g,' ').trim();
+ }
+ function speechParts(text){const sentences=text.match(/[^.!?]+(?:[.!?]+|$)/g)||[text];const parts=[];for(const sentence of sentences){const words=sentence.trim().split(/\s+/);let part='';for(const word of words){if(part.length+word.length>220&&part){parts.push(part);part='';}part+=(part?' ':'')+word;}if(part)parts.push(part);}return parts;}
  function speak(node,plainText){
   if(!synthesis)return;stopInput();stopSpeech();const my=++session;
-  let text=plainText;if(text===undefined){const copy=node.cloneNode(true);copy.querySelectorAll('.ai-voice-controls,strong').forEach(x=>x.remove());text=copy.textContent;}text=String(text||'').trim();if(!text){note('Сначала введите или надиктуйте текст.');return;}
-  const voices=synthesis.getVoices();const russian=voices.find(v=>/^ru(?:-|_)/i.test(v.lang));
+  let text=plainText;if(text===undefined){const copy=node.cloneNode(true);copy.querySelectorAll('.ai-voice-controls,article>strong').forEach(x=>x.remove());text=copy.textContent;}text=speechText(text);if(!text){note('Сначала введите или надиктуйте текст.');return;}
+  const voices=synthesis.getVoices();const russian=voices.filter(v=>/^ru(?:-|_)/i.test(v.lang)).sort((a,b)=>Number(/natural|neural|online|google|yandex/i.test(b.name))-Number(/natural|neural|online|google|yandex/i.test(a.name)))[0];
   if(!russian){note('На устройстве нет русского голоса. Добавьте русский голос в настройках речи устройства и попробуйте снова.');return;}
-  speechQueue=text.match(/[\s\S]{1,220}(?:\s|$)|[\s\S]{1,220}/g)||[text];speaking=true;note('Читаю ответ вслух…');updateButtons();
-  function next(){if(my!==session)return;if(!speechQueue.length){speaking=false;note('Чтение завершено.');updateButtons();return;}utterance=new SpeechSynthesisUtterance(speechQueue.shift());utterance.lang='ru-RU';utterance.voice=russian;utterance.rate=1;utterance.onend=next;utterance.onerror=e=>{if(my!==session)return;speaking=false;speechQueue=[];note('Не удалось озвучить ответ. Проверьте настройки звука устройства.');updateButtons();};synthesis.speak(utterance);}next();
+  speechQueue=speechParts(text);speaking=true;note('Читаю ответ вслух…');updateButtons();
+  function next(){if(my!==session)return;if(!speechQueue.length){speaking=false;note('Чтение завершено.');updateButtons();return;}utterance=new SpeechSynthesisUtterance(speechQueue.shift());utterance.lang='ru-RU';utterance.voice=russian;utterance.rate=.96;utterance.pitch=1;utterance.onend=next;utterance.onerror=e=>{if(my!==session)return;speaking=false;speechQueue=[];note('Не удалось озвучить ответ. Проверьте настройки звука устройства.');updateButtons();};synthesis.speak(utterance);}next();
  }
  document.addEventListener('click',e=>{
   if(e.target.closest('[data-ai-listen-draft]')){speak(null,document.querySelector('.ai-page [name="ai-prompt"]')?.value);return;}
