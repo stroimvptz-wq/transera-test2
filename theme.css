@@ -38,3 +38,7 @@ html[data-theme] #content .warehouse-stock-row:hover,html[data-theme] #content .
 html[data-theme] .fleet-stat[data-fleet-metric]:hover{background:var(--surface-raised);border-color:var(--gold)}
 html[data-theme] button:not(:disabled):hover{box-shadow:0 3px 13px #0002}
 html[data-theme] .champagne-tile:not(:disabled):hover{box-shadow:var(--tile-shadow),0 0 0 1px var(--gold)}
+
+/* Keep the left reserved space empty; navigation lives in the main menu. */
+html[data-theme] .sidebar{background:var(--canvas);border-right:0}
+html[data-theme] .sidebar>*{display:none!important}

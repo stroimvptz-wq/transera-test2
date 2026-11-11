@@ -37,9 +37,6 @@
   if(identity!==next){identity=next;appearanceDraft=null;applyTheme(storedTheme());}
   if(page!=='account'&&appearanceDraft!==null){appearanceDraft=null;applyTheme(storedTheme());}
   originalRender();
-  document.querySelector('.brand').innerHTML=logo();
-  const sidebar=document.getElementById('sidebar-stats');if(sidebar&&!document.querySelector('.champagne-nav'))sidebar.insertAdjacentHTML('beforebegin','<nav class="champagne-nav" aria-label="Разделы приложения">'+[['home','Главная'],...menu.filter(([id])=>id!=='account').map(([id,title])=>[id,title])].map(([id,title])=>'<button type="button" data-page="'+id+'" class="nav">'+title+'</button>').join('')+'</nav>');
-  document.querySelectorAll('.champagne-nav [data-page]').forEach(n=>n.classList.toggle('active',n.dataset.page===page));
   let top=document.querySelector('.champagne-topbar');if(!top){top=document.createElement('header');top.className='champagne-topbar';document.getElementById('content').before(top);}
   const name=currentUser?.full_name?.trim().split(/\s+/)[0]||'Личный кабинет';
   top.innerHTML='<button type="button" class="champagne-wordmark" data-page="home" aria-label="Главное меню">'+logo()+'</button><div class="champagne-top-actions"><span class="champagne-test-badge">Тестовая версия</span><button type="button" class="champagne-theme-toggle" data-theme-toggle></button><button type="button" class="champagne-profile-link" data-page="account"><span class="champagne-profile-initial" aria-hidden="true">'+esc(Array.from(name)[0].toUpperCase())+'</span><span>'+esc(name)+'</span></button></div>';
