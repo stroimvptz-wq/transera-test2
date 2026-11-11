@@ -25,3 +25,6 @@
 
 /* Keep chat voice and send controls together on the right. */
 .ai-chat-compose-actions{justify-content:flex-end;flex-wrap:nowrap}.ai-chat-compose-actions>[type=submit]{flex-shrink:0}
+
+/* Two focused AI tools. */
+.ai-tools{grid-template-columns:repeat(2,minmax(0,1fr));max-width:900px;margin-inline:auto}
