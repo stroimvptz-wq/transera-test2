@@ -12,3 +12,11 @@
 .trip-documents .trip-transport-group{border-top:1px solid #d9e4ee;margin-top:22px;padding-top:18px}.trip-documents .trip-transport-group h3{margin:0 0 14px;color:#214f70;font-size:17px}.trip-documents .trip-transport-group textarea{width:100%;min-height:90px;padding:11px;border:1px solid #ccdce9;border-radius:9px;font:inherit;color:inherit}
 
 .trip-documents .btn.trip-document-save{background:#147b47;color:#fff}.trip-documents .btn.trip-document-save:hover{background:#106339}.trip-documents .btn.trip-document-download{background:#1465b4;color:#fff}.trip-documents .btn.trip-document-download:hover{background:#0e5192}#app-notices{position:fixed;right:16px;bottom:16px;z-index:20000;display:grid;gap:8px;width:min(440px,calc(100vw - 32px));pointer-events:none}.app-notice{display:flex;align-items:start;gap:12px;padding:14px 16px;background:#173e5e;color:#fff;border-radius:10px;box-shadow:0 4px 20px #102b4a44;pointer-events:auto;white-space:pre-wrap;overflow-wrap:anywhere}.app-notice span{flex:1}.app-notice button{border:0;background:transparent;color:#fff;font-size:24px;line-height:1;cursor:pointer}
+
+/* Compact trip editor: keep route/results visible, fold the remaining sections. */
+.trip-documents details.trip-transport-group{margin:10px 0 0;padding:0;border:1px solid #d9e4ee;border-radius:10px;background:#fff}
+.trip-documents details.trip-transport-group>summary,.trip-fold-card>summary{padding:15px 14px;min-height:48px;box-sizing:border-box;font-size:17px;font-weight:700;color:#214f70;cursor:pointer;overflow-wrap:anywhere}
+.trip-fold-body{padding:4px 14px 16px}.trip-fold-card.card{padding:0}.trip-fold-card.section{margin-top:14px}
+.trip-documents details.trip-transport-group textarea{box-sizing:border-box}
+.trip-fold-card .fields>label,.trip-transport-group .fields>label{min-width:0}
+@media(max-width:600px){.trip-documents.card{padding:16px}.trip-documents details.trip-transport-group>summary,.trip-fold-card>summary{font-size:16px}.trip-fold-body{padding:4px 12px 14px}.trip-fold-card .actions{flex-wrap:wrap}.trip-document-downloads>div{width:100%;box-sizing:border-box}.trip-document-downloads .btn{flex:1}}
