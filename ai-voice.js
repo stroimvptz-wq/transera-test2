@@ -20,9 +20,9 @@
    const text=document.createElement('span');text.dataset.aiVoiceStatus='';text.setAttribute('role','status');text.textContent=status||(!Recognition?'Голосовой ввод не поддерживается этим браузером.':inline?'':'Речь распознаёт браузер; текст можно проверить перед отправкой.');if(inline){if(imageMode){controls.className='ai-voice-controls ai-image-mic';form.querySelector('.ai-image-prompt').append(controls);}else form.querySelector('.ai-chat-compose-actions').prepend(controls);text.className='ai-chat-voice-status';form.append(text);}else{controls.append(text);form.append(controls);}
   }
   root.querySelectorAll('.ai-message-assistant,.ai-result-text').forEach(node=>{
-   if(node.querySelector('[data-ai-speak]'))return;
+   if(node.querySelector('[data-ai-speak],[data-content-speak]'))return;
    const controls=document.createElement('div');controls.className='ai-voice-controls';
-   const button=document.createElement('button');button.type='button';button.className='btn secondary';button.dataset.aiSpeak='';button.textContent='▶ Прослушать';button.disabled=!synthesis;controls.append(button);
+   const button=document.createElement('button');button.type='button';button.className='btn secondary';if(window.BIZNES_AI_CONTENT_CONFIG?.voiceApiUrl){button.dataset.contentSpeak='';button.textContent='▶ Нейроголос';}else{button.dataset.aiSpeak='';button.textContent='▶ Прослушать';button.disabled=!synthesis;}controls.append(button);
    const stop=document.createElement('button');stop.type='button';stop.className='btn secondary';stop.dataset.aiSpeechStop='';stop.textContent='■ Остановить';stop.title='Остановить прослушивание';stop.setAttribute('aria-label','Остановить прослушивание');controls.append(stop);node.append(controls);
   });updateButtons();
  }
