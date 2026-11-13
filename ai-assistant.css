@@ -32,3 +32,9 @@
 .ai-chat-check-result{white-space:pre-wrap;overflow-wrap:anywhere}
 
 .ai-chat-compose-actions>.ai-chat-send{display:grid;place-items:center;width:46px;min-width:46px;height:46px;min-height:46px;padding:0;border-radius:50%;box-shadow:0 3px 12px #0003}.ai-chat-send[aria-busy=true] svg{opacity:.5}.ai-image-prompt{position:relative}.ai-image-prompt textarea{padding-bottom:65px}.ai-image-mic{position:absolute;right:12px;bottom:12px;margin:0}.ai-image-mic .btn{display:grid;place-items:center;width:44px;height:44px;padding:0;border-radius:50%;font-size:20px}.ai-image-send{min-height:46px}
+
+/* Three equally wide entry cards, in the owner-approved order. */
+.champagne-menu:has(>.ai-home-tile){grid-template-columns:minmax(0,1fr)}
+.champagne-menu:has(>.ai-home-tile)>.champagne-tile{grid-column:1/-1;aspect-ratio:auto;min-height:220px;height:220px}
+.champagne-menu:has(>.ai-home-tile)>.champagne-tile .champagne-tile-title{font-size:24px;max-width:none}
+@media(max-width:520px){.champagne-menu:has(>.ai-home-tile)>.champagne-tile{min-height:190px;height:190px}.champagne-menu:has(>.ai-home-tile)>.champagne-tile .champagne-tile-title{font-size:21px}}

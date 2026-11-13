@@ -55,7 +55,7 @@
    await resetRequest(route,body);if(version!==viewVersion)return;
    if(tab==='recover'){status('Если этот адрес зарегистрирован, письмо со ссылкой будет отправлено. Проверьте также папку «Спам». Ссылка действует 15 минут.');}
    else{
-    resetToken='';localStorage.removeItem('transera-auth-token');sessionStorage.removeItem('transera-auth-token');currentUser=null;
+    resetToken='';localStorage.removeItem('business-ai-test2-auth-token');sessionStorage.removeItem('business-ai-test2-auth-token');currentUser=null;
     showLandingTab('login');status('Пароль изменён. Войдите с новым паролем.');node('landing-fields').querySelector('[name="email"]')?.focus();
    }
   }catch(e){if(version===viewVersion)error.textContent=e.name==='AbortError'?'Сервер не ответил вовремя. Попробуйте ещё раз.':e instanceof TypeError?'Нет соединения с сервером. Проверьте интернет и повторите попытку.':e.message;}
