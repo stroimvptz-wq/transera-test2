@@ -1,4 +1,4 @@
-/* Downloads and unsaved edits are the only in-app dialogs. */
+/* Navigation autosaves work; download and explicit destructive actions may show dialogs. */
 'use strict';
 let appActiveDialog=null,appSavePromise=null;
 function appNotice(message){
@@ -24,21 +24,26 @@ function appPendingChanges(documentOnly=false){
  const calculation=typeof page!=='undefined'&&page==='calculators'&&JSON.stringify(draft)!==JSON.stringify(selectedCalcId?{...defaults(),...(calculations.find(x=>x.id===selectedCalcId)||{})}:defaults());
  const profileForm=document.getElementById('profile-edit-form'),profile=!!profileForm&&['full_name','organization'].some(k=>profileForm.elements[k].value.trim()!==String(currentUser?.[k]||''));return {doc,trip,calculation,profile};
 }
+const appWorkMemory=new Map();let appRestoredContext=null;
+function appWorkKey(kind,id='new'){return 'business-ai-work:'+encodeURIComponent(String(currentUser?.email||'guest').toLowerCase())+':'+kind+':'+id;}
+function appWorkRead(key){try{return JSON.parse(localStorage.getItem(key)||'null')||appWorkMemory.get(key);}catch{return appWorkMemory.get(key);}}
+function appWorkWrite(key,value){appWorkMemory.set(key,structuredClone(value));try{localStorage.setItem(key,JSON.stringify(value));}catch{appNotice('Не удалось сохранить на устройство. Черновик остаётся в этой вкладке.');}}
+function appWorkRemove(key){appWorkMemory.delete(key);try{localStorage.removeItem(key);}catch{}}
+function appCacheWork(){const profile=document.getElementById('profile-edit-form');if(profile&&currentUser?.email){const value={full_name:profile.elements.full_name.value.trim().slice(0,120),organization:profile.elements.organization.value.trim().slice(0,180)};try{localStorage.setItem(profileKey(),JSON.stringify(value));applyProfileOverrides();}catch{}}if(typeof draft==='undefined')return;if(tripEditor)appWorkWrite(appWorkKey('trip',editing||'new'),draft);else if(page==='calculators')appWorkWrite(appWorkKey('calculation',selectedCalcId||'new'),draft);}
+function appRestoreWork(){const kind=tripEditor?'trip':page==='calculators'?'calculation':null;if(!kind){appRestoredContext=null;return;}const key=appWorkKey(kind,kind==='trip'?editing||'new':selectedCalcId||'new');if(appRestoredContext===key)return;appRestoredContext=key;const saved=appWorkRead(key);if(saved&&typeof saved==='object'&&!Array.isArray(saved))draft={...defaults(),...saved};}
 function appSaveBeforeLeave(documentOnly=false){
- if(appSavePromise)return appSavePromise;
- const changes=appPendingChanges(documentOnly);if(!Object.values(changes).some(Boolean))return Promise.resolve(true);
- if(changes.doc)clearTimeout(docSaveTimer);appDismissDialog();
- appSavePromise=(async()=>{
-  const ok=await appDialog('Есть несохранённые изменения. Сохраните их перед переходом.',{title:'Несохранённые изменения',ok:'Сохранить'});if(!ok){if(changes.doc)docQueueSave();return false;}
-  try{
-   if(changes.doc&&!docFlush()){appNotice('Не удалось сохранить документ. Можно скачать копию черновика.');return false;}
-   if(changes.trip){if(!draft.from?.trim()||!draft.to?.trim()){appNotice('Для сохранения рейса укажите пункты отправления и назначения.');return false;}const old=trips.find(t=>t.id===(editing||draft.id));if(editing&&normalizeStatus(old||{})==='Закрыт'&&draft.status==='Доставлен'&&canClose(draft)){draft.status='Закрыт';draft.closedAt=new Date().toISOString();}if(draft.status==='Закрыт'&&!canClose(draft)){appNotice('Нельзя сохранить закрытый рейс с задолженностью или без документов.');return false;}if(draft.status!=='Закрыт')delete draft.closedAt;const item={...draft,id:old?.id||editing||uid(),number:old?.number||'ТР-'+String(Date.now()).slice(-8),createdAt:old?.createdAt||draft.createdAt||new Date().toISOString()};await put('trips',item);trips=await all('trips');draft={...defaults(),...item};editing=item.id;}
-   if(changes.calculation){const item={...draft,id:uid(),createdAt:new Date().toISOString()};await put('calculations',item);calculations=await all('calculations');selectedCalcId=item.id;draft={...defaults(),...item};}
-   if(changes.profile){const form=document.getElementById('profile-edit-form');if(!form?.reportValidity())return false;form.requestSubmit();if(editingProfile)return false;}
-   return true;
-  }catch(error){appNotice('Не удалось сохранить изменения: '+error.message);return false;}
- })().finally(()=>{appSavePromise=null;});return appSavePromise;
+ if(appSavePromise)return appSavePromise;const changes=appPendingChanges(documentOnly);appCacheWork();
+ appSavePromise=(async()=>{try{
+  if(changes.doc)docFlush();
+  if(changes.trip&&currentUser?.email_verified===true&&draft.from?.trim()&&draft.to?.trim()&&(draft.status!=='Закрыт'||canClose(draft))){const old=trips.find(t=>t.id===(editing||draft.id)),item={...draft,id:old?.id||editing||uid(),number:old?.number||'ТР-'+String(Date.now()).slice(-8),createdAt:old?.createdAt||draft.createdAt||new Date().toISOString()};await put('trips',item);trips=await all('trips');draft={...defaults(),...item};editing=item.id;}
+  if(changes.calculation&&currentUser?.email_verified===true){const item={...draft,id:selectedCalcId||uid(),createdAt:draft.createdAt||new Date().toISOString()};await put('calculations',item);calculations=await all('calculations');selectedCalcId=item.id;draft={...defaults(),...item};}
+  if(changes.profile){const form=document.getElementById('profile-edit-form'),value={full_name:form.elements.full_name.value.trim().slice(0,120),organization:form.elements.organization.value.trim().slice(0,180)};localStorage.setItem(profileKey(),JSON.stringify(value));applyProfileOverrides();editingProfile=false;}
+ }catch(error){appNotice('Не удалось завершить автосохранение. Черновик остаётся на устройстве: '+error.message);}return true;})().finally(()=>{appSavePromise=null;});return appSavePromise;
 }
+window.addEventListener('input',appCacheWork);window.addEventListener('change',appCacheWork);window.addEventListener('beforeunload',appCacheWork);
+const appOriginalRender=render;render=function(){appRestoreWork();appOriginalRender();};
+const appOriginalPut=put;put=async function(name,item){await appOriginalPut(name,item);if(name==='trips'&&tripEditor){appWorkRemove(appWorkKey('trip',editing||'new'));appWorkRemove(appWorkKey('trip',item.id));}if(name==='calculations'&&page==='calculators'){appWorkRemove(appWorkKey('calculation',selectedCalcId||'new'));appWorkRemove(appWorkKey('calculation',item.id));}};
+
 function appReleaseDocument(){appDismissDialog();if(typeof localDocumentId!=='undefined'){clearTimeout(docSaveTimer);clearTimeout(docPreviewTimer);localDocumentId=null;docPending=null;docDirty=false;}}
 if(typeof setPage==='function'){
  const originalSetPage=setPage;setPage=async function(target){if(page===target&&!tripEditor)return;if(!await appSaveBeforeLeave())return;appReleaseDocument();originalSetPage(target);};

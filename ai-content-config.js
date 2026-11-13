@@ -1,2 +1,1 @@
-/* Public service URLs only. Never put IAM tokens or timer secrets here. */
-window.BIZNES_AI_CONTENT_CONFIG=Object.freeze({environment:'test',contentApiUrl:'',voiceApiUrl:''});
+window.BIZNES_AI_CONTENT_CONFIG=Object.freeze({environment:window.BUSINESS_PLATFORM.environment,contentApiUrl:window.BUSINESS_PLATFORM.content,voiceApiUrl:window.BUSINESS_PLATFORM.chat});

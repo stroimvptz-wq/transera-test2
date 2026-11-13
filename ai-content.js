@@ -2,7 +2,7 @@
 'use strict';
 (()=>{
  const cfg=window.BIZNES_AI_CONTENT_CONFIG||{};
- const connected=key=>cfg.environment==='test'&&/^https:\/\/functions\.yandexcloud\.net\/[a-z0-9]+$/.test(cfg[key]||'');
+ const connected=key=>['test','production'].includes(cfg.environment)&&/^https:\/\/functions\.yandexcloud\.net\/[a-z0-9]+$/.test(cfg[key]||'');
  const escape=x=>String(x??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
  const points=x=>new Intl.NumberFormat('ru-RU',{minimumFractionDigits:2,maximumFractionDigits:2}).format((x||0)/1e6);
  const id=()=>crypto.randomUUID();
