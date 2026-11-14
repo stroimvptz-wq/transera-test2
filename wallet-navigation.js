@@ -15,6 +15,7 @@
   if(panel?.open){hide();if(e.state?.page===entry.state.page&&e.state?.aiTool===entry.state.aiTool){e.stopImmediatePropagation();(entry.trigger?.isConnected?entry.trigger:document.querySelector('[data-ai-wallet]'))?.focus();}}
  },true);
  document.addEventListener('click',e=>{const balance=e.target.closest('[data-ai-wallet]'),close=e.target.closest('[data-wallet-back]'),pay=e.target.closest('[data-wallet-topup]');if(!balance&&!close&&!pay)return;e.preventDefault();e.stopImmediatePropagation();if(balance)open(balance);else if(close)back();else void topup();},true);
- function decorate(){if(entry&&entry.owner!==who()){hide();entry=null;entries.clear();}if(page==='account'&&history.state?.accountSection==='ai-balance'){const b=document.getElementById('account-ai-balance');if(b)b.open=true;}if(page==='documents'){const head=document.querySelector('.doc-workspace-head')||document.querySelector('.doc-page-head');if(head&&!head.querySelector('[data-ai-wallet]')){const b=document.createElement('button');b.type='button';b.className='btn secondary';b.dataset.aiWallet='';b.textContent='Баланс и списания';head.append(b);}}}
+ function decorate(){if(entry&&entry.owner!==who()){hide();entry=null;entries.clear();}if(page==='account'&&history.state?.accountSection==='ai-balance'){const b=document.getElementById('account-ai-balance');if(b)b.open=true;}}
+
  const previous=render;render=function(){previous();decorate();};window.BUSINESS_WALLET={open,close:back};decorate();
 })();
