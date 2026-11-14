@@ -2,7 +2,7 @@
 (()=>{
  const cfg=window.BIZNES_AI_CHAT_CONFIG||{};if(!cfg.serverReady)return;
  let player=null,epoch=0,busy=false,current=null,index=0;const cache=new Map();
- const note=t=>document.querySelectorAll('[data-ai-voice-status]').forEach(n=>n.textContent=t);
+ const note=t=>{window.BUSINESS_CHAT_OPERATION_NOTICE?.('speech',t);document.querySelectorAll('[data-ai-voice-status]').forEach(n=>n.textContent=t);};
  function chunks(text){const parts=[];for(let rest=String(text||'').trim();rest;){let n=Math.min(2600,rest.length);if(n<rest.length){const at=Math.max(rest.lastIndexOf('. ',n),rest.lastIndexOf('\n',n),rest.lastIndexOf(' ',n));if(at>1300)n=at+1;if(/[\uD800-\uDBFF]/.test(rest[n-1]))n--;}parts.push(rest.slice(0,n));rest=rest.slice(n).trimStart();}return parts;}
  function stop(){epoch++;busy=false;player?.pause();player=null;note('');}
  function dispose(){stop();for(const x of cache.values())for(const u of x.urls)if(u)URL.revokeObjectURL(u);cache.clear();current=null;}

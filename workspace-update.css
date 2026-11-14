@@ -1,3 +1,28 @@
 .account-billing{padding:clamp(16px,3vw,28px)}.account-billing [data-billing-sections]{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}.account-billing .account-panel{min-width:0;margin:0}.account-promo{margin-top:22px;padding-top:18px;border-top:1px solid var(--border,#7b74674a)}.account-promo form{max-width:580px}.account-billing input[type=checkbox]{width:auto}.trip-create-documents{margin:18px 0}.account-billing a,.account-billing button{overflow-wrap:anywhere}.ai-message [data-ai-retry]{margin-top:10px}.ai-typing{padding:10px 16px;border-radius:10px;background:var(--panel,#292a2b)}.account-billing .subscription-tariffs{grid-template-columns:1fr}.account-services [data-email-list] p{padding:10px 0;border-bottom:1px solid var(--border,#7b74674a)}.account-services [data-email-list] button{margin-left:10px}.champagne-account-tabs{flex-wrap:wrap}.account-billing .panel-body{padding:14px}.account-billing .actions{gap:8px;flex-wrap:wrap}.legal-footer{margin:28px 0 8px;display:flex;gap:14px;flex-wrap:wrap;font-size:13px}.legal-footer a{color:inherit}.legal-preview-note{padding:12px;border:1px solid #b38334;border-radius:8px}.account-billing .tabs{flex-wrap:wrap}@media(max-width:760px){.account-billing [data-billing-sections]{grid-template-columns:1fr}.account-services [data-email-list] button{display:block;margin:8px 0 0}.tabs[aria-label="Разделы рейсов"]{display:flex;flex-wrap:wrap}.tabs[aria-label="Разделы рейсов"] button{flex:1 1 140px;white-space:normal}.account-billing .panel-body{padding:10px}}
 
 .main:has(#content>.champagne-menu>.ai-home-tile) .legal-footer{margin:10px 0 0;font-size:12px}.legal-footer summary{cursor:pointer}.legal-footer nav{display:flex;gap:10px;flex-wrap:wrap;margin-top:8px}.champagne-menu:has(>.ai-home-tile)>.champagne-tile{height:clamp(86px,calc((100svh - 285px)/3),150px)}@media(max-height:500px){.champagne-menu:has(>.ai-home-tile)>.champagne-tile{height:max(48px,calc((100svh - 240px)/3))}}
+
+.ai-chat-main [data-ai-voice-status],.ai-chat-main .ai-chat-status{display:none!important}
+
+/* Quiet activity signature, outside the saved conversation. */
+.chat-activity{display:flex;align-items:center;gap:9px;min-height:24px;margin:0 0 10px;color:var(--gold,#dab779)}
+.chat-activity[hidden]{display:none!important}
+.chat-activity-label{font-family:Georgia,'Times New Roman',serif;font-size:13px;font-weight:400;letter-spacing:.09em;line-height:1.5}
+.chat-activity-orbit{width:17px;height:17px;box-sizing:border-box;border:1.5px solid currentColor;border-right-color:transparent;border-bottom-color:transparent;border-radius:50%;animation:chat-orbit 1s linear infinite}
+.chat-activity-wave{display:none;align-items:center;gap:3px;height:20px}
+.chat-activity-wave i{display:block;width:3px;height:6px;background:currentColor;border-radius:3px;animation:chat-wave .9s ease-in-out infinite alternate}
+.chat-activity-wave i:nth-child(2),.chat-activity-wave i:nth-child(4){animation-delay:.2s}.chat-activity-wave i:nth-child(3){animation-delay:.4s}
+.chat-activity[data-mode=listening] .chat-activity-orbit,.chat-activity[data-mode=writing] .chat-activity-orbit{display:none}
+.chat-activity[data-mode=listening] .chat-activity-wave,.chat-activity[data-mode=writing] .chat-activity-wave{display:flex}
+.chat-activity[data-mode=writing] .chat-activity-wave i{height:4px;animation:chat-dot 1.2s ease-in-out infinite}
+.ai-chat-composer[data-activity=writing]{border-color:#b69a68;box-shadow:0 0 0 2px #d6b67b12}
+.ai-chat-composer[data-activity=listening]{border-color:#d6b67b;box-shadow:0 0 0 3px #d6b67b20}
+.ai-chat-composer [data-ai-mic][aria-pressed=true]{color:#f0d29d;box-shadow:0 0 0 3px #d6b67b30}
+@keyframes chat-orbit{to{transform:rotate(360deg)}}
+@keyframes chat-wave{to{height:18px;opacity:.55}}
+@keyframes chat-dot{50%{opacity:.3;transform:translateY(-2px)}}
+@media(prefers-reduced-motion:reduce){.chat-activity-orbit,.chat-activity-wave i{animation:none!important}}
+[data-media-form]{border:1px solid transparent;border-radius:16px;padding:12px}
+[data-media-form][data-activity=writing]{border-color:var(--gold,#b69a68);box-shadow:0 0 0 2px #d6b67b12}
+[data-media-form][data-activity=listening]{border-color:var(--gold,#d6b67b);box-shadow:0 0 0 3px #d6b67b20}
+[data-media-mic][aria-pressed=true]{color:var(--gold,#d6b67b);box-shadow:0 0 0 3px #d6b67b30}
