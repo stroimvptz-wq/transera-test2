@@ -1,11 +1,30 @@
-/* Reuses the existing promo form; subscription promo handling stays separate. */
+/* One promo field; the server resolves AI balance versus the existing subscription service. */
 'use strict';
 (()=>{
- const cfg=window.BIZNES_AI_BONUS_CONFIG||{},ready=cfg.enabled===true&&['test','production'].includes(cfg.environment)&&/^https:\/\/functions\.yandexcloud\.net\/[a-z0-9]+$/.test(cfg.apiUrl||'');
- let purpose='subscription',busy=false,owner='';
- function enhance(){const next=String(currentUser?.email||'').toLowerCase();if(next!==owner){owner=next;purpose='subscription';busy=false;}const form=document.getElementById('transera-promo-form');if(!form)return;if(!form.querySelector('[name=promo-purpose]')){const label=document.createElement('label');label.textContent='Для чего промокод';const select=document.createElement('select');select.name='promo-purpose';select.innerHTML='<option value="subscription">Подписка сайта</option><option value="ai">AI-баланс</option>';select.value=purpose;label.append(select);form.prepend(label);const note=document.createElement('p');note.dataset.aiBonusNote='';note.className='muted';form.append(note);}const select=form.querySelector('[name=promo-purpose]');select.value=purpose;select.disabled=busy;const button=form.querySelector('[type=submit]');if(button&&purpose==='ai'){button.dataset.aiBonusManaged='true';button.disabled=busy||!ready;}else if(button?.dataset.aiBonusManaged){button.disabled=false;delete button.dataset.aiBonusManaged;}const note=form.querySelector('[data-ai-bonus-note]');if(note){note.hidden=purpose!=='ai';note.textContent=ready?'Баллы поступят в общий AI-баланс. Подписка сайта не изменится.':'Активация AI-промокодов готовится к подключению.';}}
+ let busy=false,owner='';
+ const who=()=>String(currentUser?.email||'').trim().toLowerCase();
+ function enhance(){if(who()!==owner){owner=who();busy=false;}const form=document.getElementById('transera-promo-form');if(!form)return;form.querySelector('[name=promo-purpose]')?.closest('label')?.remove();const button=form.querySelector('[type=submit]');button.disabled=busy;button.textContent=busy?'Проверяем…':'Применить';let note=form.querySelector('[data-ai-bonus-note]');if(!note){note=document.createElement('p');note.className='muted';note.dataset.aiBonusNote='';form.append(note);}note.textContent='Один код для подписки или AI-баланса. Тип определится автоматически.';}
  const previous=render;render=function(){previous();enhance();};
- document.addEventListener('change',e=>{if(e.target.name==='promo-purpose'){purpose=e.target.value;const status=document.getElementById('transera-promo-status');if(status)status.textContent='';enhance();}});
- document.addEventListener('submit',async e=>{if(e.target.id!=='transera-promo-form'||purpose!=='ai')return;e.preventDefault();e.stopImmediatePropagation();if(busy)return;const who=String(currentUser?.email||'').toLowerCase(),form=e.target,panel=document.getElementById('transera-promo-status');if(!ready){if(panel)panel.textContent='AI-промокоды ещё не подключены.';return;}const code=form.elements.promo.value.trim();if(!code)return;busy=true;enhance();if(panel)panel.textContent='Проверяем AI-промокод…';try{const response=await fetch(cfg.apiUrl+'?route='+encodeURIComponent('/promos/redeem'),{method:'POST',headers:{'Content-Type':'application/json','X-TRANSERA-Token':'Bearer '+(sessionStorage.getItem('business-ai-test2-auth-token')||'')},body:JSON.stringify({code}),credentials:'omit',cache:'no-store',signal:AbortSignal.timeout(20000)}),d=await response.json().catch(()=>null);if(String(currentUser?.email||'').toLowerCase()!==who)return;if(!response.ok||!d?.ok)throw Error(d?.error||'Не удалось проверить код. Повторная проверка не начислит баллы дважды.');if(panel)panel.textContent=(d.alreadyApplied?'Этот промокод уже активирован.':'Начислено '+new Intl.NumberFormat('ru-RU').format(d.points)+' AI-баллов.')+' Текущий баланс: '+new Intl.NumberFormat('ru-RU',{maximumFractionDigits:2}).format(d.balanceMicro/1e6)+' балла.';}catch(error){if(String(currentUser?.email||'').toLowerCase()===who&&panel)panel.textContent=error.message;}finally{if(String(currentUser?.email||'').toLowerCase()===who){busy=false;enhance();}}},true);
+ document.addEventListener('submit',async event=>{
+  if(event.target.id!=='transera-promo-form')return;event.preventDefault();event.stopImmediatePropagation();if(busy)return;
+  const code=event.target.elements.promo.value.trim(),account=who();if(!code)return;
+  const output=text=>{if(who()===account){const n=document.getElementById('transera-promo-status');if(n)n.textContent=text;}};
+  busy=true;enhance();output('Определяем тип промокода…');
+  try{
+   const platform=window.BUSINESS_PLATFORM||{};
+   if(!platform.billing)throw Error('Сервис промокодов ещё не подключён.');
+   let resolved;try{resolved=await window.BUSINESS_PLATFORM_API('billing','/promos/type',{code});}catch(error){if(error.status!==404)throw error;resolved={kind:/^AI-[A-F0-9]{24}$/i.test(code)?'ai':'subscription'};}if(who()!==account)return;
+   if(resolved.kind==='ai'){
+    const result=await window.BUSINESS_PLATFORM_API('billing','/promos/redeem',{code});if(who()!==account)return;
+    output((result.alreadyApplied?'Этот промокод уже активирован.':'Начислено '+Number(result.points).toLocaleString('ru-RU')+' AI-баллов.')+' Баланс: '+(Number(result.balanceMicro)/1e6).toLocaleString('ru-RU',{maximumFractionDigits:2})+' баллов.');
+    window.dispatchEvent(new Event('business-ai-balance-changed'));
+   }else if(resolved.kind==='subscription'){
+    const result=await subscriptionApi('/promo/redeem',{code});if(who()!==account)return;
+    if(!result.activated)throw Error('Подписка не активирована.');
+    await transeraRefreshAccess();output('Подписка продлена до '+new Date(result.paid_until).toLocaleDateString('ru-RU')+'.');
+   }else throw Error('Сервер не определил тип кода. Баллы и подписка не изменены.');
+  }catch(error){output(error.message==='CODE_UNAVAILABLE'?'Промокод не найден, истёк или уже использован.':error.message);}
+  finally{if(who()===account){busy=false;enhance();}}
+ },true);
  enhance();
 })();

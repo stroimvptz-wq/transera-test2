@@ -71,8 +71,8 @@ document.addEventListener('click',async e=>{
  if(download&&!await appConfirm('Скачать '+docLabel(type)+' в формате PDF?'))return;
  if(!button.isConnected||page!=='trips'||!tripEditor)return;if(!docFlush())return;
  const vatKey=side==='transport'?(draft.mode==='own'?'td_clientVat':'td_carrierVat'):'td_'+side+'Vat';
- if(!draft[vatKey]){alert('Выберите ставку НДС в блоке «Перевозка, груз и расчёты → Расчёты и условия». Если НДС нет, выберите «Без НДС».');return;}
- if(type==='ttn'&&!draft.td_goodsVat){alert('Укажите НДС товара в блоке «Груз → Количество и стоимость товара для ТТН».');return;}
+ if(download&&!draft[vatKey]){alert('Выберите ставку НДС в блоке «Перевозка, груз и расчёты → Расчёты и условия». Если НДС нет, выберите «Без НДС».');return;}
+ if(download&&type==='ttn'&&!draft.td_goodsVat){alert('Укажите НДС товара в блоке «Груз → Количество и стоимость товара для ТТН».');return;}
  const d=tripBuildDocument(draft,type,side),rows=localDocumentRead();rows.unshift(d);
  try{localDocumentWrite(rows);}catch{alert('Не удалось сохранить черновик документа: проверьте свободное место на устройстве.');return;}
  docReturnFocus=button;localDocumentType=type;localDocumentId=d.id;docStep=0;docPending=d;docDirty=false;render();docMount();if(download){const pdf=document.querySelector('[data-doc-pdf]');await docSavePDF(localDocumentData(),pdf);}
