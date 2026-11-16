@@ -3,7 +3,7 @@
  const cfg=window.BUSINESS_PLATFORM||{},esc=x=>String(x??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])),uid=()=>crypto.randomUUID();let owner='',revision=0,paymentId=null,paymentBusy=false;
  const identity=()=>String(currentUser?.email||'').toLowerCase();
  function keepPayment(url){if(paymentId)window.BUSINESS_DEVICE_DRAFTS?.set('pending-ai-payment',{id:paymentId,url:url||window.BUSINESS_DEVICE_DRAFTS?.get('pending-ai-payment',identity())?.url||null},identity());else window.BUSINESS_DEVICE_DRAFTS?.remove('pending-ai-payment',identity());}
- function paymentControls(){const saved=window.BUSINESS_DEVICE_DRAFTS?.get('pending-ai-payment',identity()),check=document.querySelector('[data-ai-payment-status]'),a=document.querySelector('[data-ai-payment-link]');if(!paymentId)return;if(check)check.hidden=false;if(a&&saved?.url){try{const u=new URL(saved.url);if(u.protocol==='https:'&&['tbank.ru','tinkoff.ru','tbank-online.com'].some(h=>u.hostname===h||u.hostname.endsWith('.'+h))){a.href=u.href;a.hidden=false;}}catch{}}}
+ function paymentControls(){const saved=window.BUSINESS_DEVICE_DRAFTS?.get('pending-ai-payment',identity()),check=document.querySelector('[data-ai-payment-status]'),a=document.querySelector('[data-ai-payment-link]');if(!paymentId)return;if(check)check.hidden=false;if(a&&saved?.url){try{const u=new URL(saved.url);if(u.protocol==='https:'&&['tbank.ru','tinkoff.ru','tbank-online.com','pay.linksecurepayment.com'].some(h=>u.hostname===h||u.hostname.endsWith('.'+h))){a.href=u.href;a.hidden=false;}}catch{}}}
 
  async function api(service,route,body){const who=identity(),token=sessionStorage.getItem('business-ai-test2-auth-token'),base=cfg[service];if(!/^https:\/\/functions\.yandexcloud\.net\/[a-z0-9]+$/.test(base||''))throw Error('Сервис ещё не подключён.');if(!token&&route!=='/catalog')throw Error('Войдите в аккаунт.');const [path,query]=route.split('?'),r=await fetch(base+'?route='+encodeURIComponent(path)+(query?'&'+query:''),{method:body?'POST':'GET',headers:{...(token?{'X-TRANSERA-Token':'Bearer '+token}:{}),...(body?{'Content-Type':'application/json'}:{})},...(body?{body:JSON.stringify(body)}:{}),credentials:'omit',cache:'no-store',signal:AbortSignal.timeout(body&&service==='content'&&['/posts/generate','/generate','/audio/generate','/render/retry'].includes(path)?285000:30000)}),d=await r.json();if(identity()!==who)throw Error('Аккаунт изменился.');if(!r.ok||d.ok===false){const error=Error(d.error||'Не удалось выполнить действие.');error.code=d.code;error.status=r.status;throw error;}return d;}
  window.BUSINESS_PLATFORM_API=api;
@@ -34,7 +34,7 @@
     const p=old.payment||{},state=String(p.status||'').toLowerCase();
     const saved=window.BUSINESS_DEVICE_DRAFTS?.get('pending-ai-payment',identity());
     const paymentUrl=p.confirmationUrl||saved?.url;
-    if(paymentUrl){try{const u=new URL(paymentUrl);if(u.protocol==='https:'&&['tbank.ru','tinkoff.ru','tbank-online.com'].some(h=>u.hostname===h||u.hostname.endsWith('.'+h))){link.href=u.href;link.hidden=false;keepPayment(u.href);}}catch{}}
+    if(paymentUrl){try{const u=new URL(paymentUrl);if(u.protocol==='https:'&&['tbank.ru','tinkoff.ru','tbank-online.com','pay.linksecurepayment.com'].some(h=>u.hostname===h||u.hostname.endsWith('.'+h))){link.href=u.href;link.hidden=false;keepPayment(u.href);}}catch{}}
     if(p.credited){
      n.textContent='Оплата уже подтверждена, баллы начислены.';
      if(check){paymentId=null;keepPayment();statusButton.hidden=true;link.hidden=true;await status();}
@@ -56,7 +56,7 @@
   paymentId=id;keepPayment();
   const d=await api('billing','/payments/create',{id,rubles:Number(pay.dataset.aiTopup),consent:true,terms:window.BUSINESS_TERMS});
   const p=d.payment||{};
-  if(p.confirmationUrl){try{const u=new URL(p.confirmationUrl);if(u.protocol!=='https:'||!['tbank.ru','tinkoff.ru','tbank-online.com'].some(h=>u.hostname===h||u.hostname.endsWith('.'+h)))throw Error('Недопустимая ссылка банка.');link.href=u.href;link.hidden=false;keepPayment(u.href);}catch{n.textContent='Платёж создан, но ссылка на банк некорректна. Проверьте состояние оплаты.';statusButton.hidden=false;return;}}
+  if(p.confirmationUrl){try{const u=new URL(p.confirmationUrl);if(u.protocol!=='https:'||!['tbank.ru','tinkoff.ru','tbank-online.com','pay.linksecurepayment.com'].some(h=>u.hostname===h||u.hostname.endsWith('.'+h)))throw Error('Недопустимая ссылка банка.');link.href=u.href;link.hidden=false;keepPayment(u.href);}catch{n.textContent='Платёж создан, но ссылка на банк некорректна. Проверьте состояние оплаты.';statusButton.hidden=false;return;}}
   n.textContent=p.confirmationUrl?(p.test?'Создан тестовый платёж.':'Платёж создан. Перейдите в Т-Банк.'):'Сервер не вернул ссылку Т-Банка. Проверьте состояние оплаты.';
   statusButton.hidden=false;
  }catch(err){
