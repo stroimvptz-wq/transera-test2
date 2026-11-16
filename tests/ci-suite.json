@@ -1,5 +1,5 @@
 {
-  "suiteSha256": "1c4e5bcbff29ee11d78c97123f6f1b3d27fc4f0690f4d114967d18a038737dde",
+  "suiteSha256": "dcb354ea66ae4ba7ff293bf525f1aec1defa41de2504dde0968448d13b119d38",
   "files": {
     ".github/workflows/browser-tests.yml": "6af7e4c7e03ef39dc35e29d7e5d172946d18dbad6c48bfa9d02ab47a44551cb2",
     ".github/workflows/deploy.yml": "82edf6352f1da86e05bc29b5d6c6f45c53b9d8668f69f9ab64cbeb28bdc75621",
@@ -11,10 +11,10 @@
     "tests/review/completion.spec.cjs": "8e3c917bf1d41c3e45185d7f86b4fa707cb5a419a4eb3a97d3c595a8c39e6a95",
     "tests/review/document-preview.spec.cjs": "de46f04d574a7cc6ccca7a0f997e281e3172f292e3ae5d0b994cf5889f8cf031",
     "tests/review/features.spec.cjs": "670ac8a0d38ed4506c6f0d983b1b179c87e25962a654f1014475d1246634bdca",
-    "tests/review/final-delivery.spec.cjs": "bbeb9b5f9d1410a398d0119bb244f66391bc3c8f8ebe884bd16337741c2d163d",
+    "tests/review/final-delivery.spec.cjs": "74969112a88d85e63c093bd4d89989f0fd50baa43dc84939a81c2ef810397ae4",
     "tests/review/final-options.json": "fdcf511a5300dc89138d54178915913aeaba24a48eb3a076a51a72e06a54958f",
-    "tests/review/home-menu.spec.cjs": "97693195ab09638d0468237f5cbc4a5920ce479a199a96d1a4021d5835af7570",
-    "tests/review/layout.spec.cjs": "6ff7a378fe7f36682473c2e54178a275b1f743ef9f82b968283c0bcb86a89855",
+    "tests/review/home-menu.spec.cjs": "feb6c6e148019eed05a7c3df77052a995addda6508bf9afcd17a8f8d9d54e744",
+    "tests/review/layout.spec.cjs": "6cbf3b598ff3ff952f998bc94b488c11675e16e5ec9168970cdd243b8f900b0c",
     "tests/review/login-route.spec.cjs": "987484ef9b9639c5086be92e10f60762f1315d67395cad6732ac13f51a841087",
     "tests/review/numeric-regression.spec.cjs": "cd526fa2ad97d38cddc0895cd0e78bda47304cb538caafecb690f977fccdf839",
     "tests/review/persistent-workspace.spec.cjs": "bc2b7ae003b365041dee20492a9919d19be307a8dab98a61d6181529231dae4c",
