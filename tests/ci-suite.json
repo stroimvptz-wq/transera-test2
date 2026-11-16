@@ -1,5 +1,5 @@
 {
-  "suiteSha256": "1f871435f1e8cfff727a32f87d0f5ddc4ef562b9b24f78e4d0d2fef3e625271a",
+  "suiteSha256": "91dc23b571e6716fccd8799bc44c133c12b47fdb9eeb4a67eecee6dcc9d2c4f0",
   "files": {
     ".github/workflows/browser-tests.yml": "6af7e4c7e03ef39dc35e29d7e5d172946d18dbad6c48bfa9d02ab47a44551cb2",
     ".github/workflows/deploy.yml": "82edf6352f1da86e05bc29b5d6c6f45c53b9d8668f69f9ab64cbeb28bdc75621",
@@ -20,7 +20,7 @@
     "tests/review/persistent-workspace.spec.cjs": "bc2b7ae003b365041dee20492a9919d19be307a8dab98a61d6181529231dae4c",
     "tests/review/photo.spec.cjs": "287c7a25209b7c500bd2b012943d8ec86bf1941ebba4fd9c2d6f171d136e9db1",
     "tests/review/platform.spec.cjs": "d30407eaadac8710a0320d8d17fb64f46cd45da5aafe62b7bb77c90becb81442",
-    "tests/review/policy-pricing.spec.cjs": "c0d607668e56122b90b7c3ed2ce94cc67b0b96395c5f469fce18c61a360e06eb",
+    "tests/review/policy-pricing.spec.cjs": "7ec07d219cf3b4b9a37f3e16954384b3cf6579496803c13b1cc8be5ba18c8779",
     "tests/review/review-options.json": "533a58bb0b6dda226f286605353c75ff959ec6ef73425323839f139c707a2be0",
     "tests/review/tariff-return.spec.cjs": "1b60dfb43623558ddf72f83c2b1c50850381a03cf1e734c6006eb4e765d5d2b7",
     "tests/review/three-image-models.spec.cjs": "f7670e40a76d0ee17f0e39e97f1e77c1d0f7cc97afc731294988f2b2e7e578a2",
