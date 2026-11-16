@@ -1,0 +1,30 @@
+{
+  "suiteSha256": "45bfc090c5369f3eb6836825b325c3bd6a3792526497b4ff64dc91a017422b49",
+  "files": {
+    ".github/workflows/browser-tests.yml": "6af7e4c7e03ef39dc35e29d7e5d172946d18dbad6c48bfa9d02ab47a44551cb2",
+    ".github/workflows/deploy.yml": "82edf6352f1da86e05bc29b5d6c6f45c53b9d8668f69f9ab64cbeb28bdc75621",
+    "playwright.config.cjs": "5eaee8542caabfda97484525b28a267eae482de1c6b4ddfc0916fb6adccea77e",
+    "tests/review/access.spec.cjs": "a2dddada546ad31caefdfc9d1bce934510b0a1acdaea3b9bc80762c30bb85634",
+    "tests/review/audio-options.json": "e9ab649b9491fd507e6073ba9b94e48575e8f084f40416e1f72ade04fb5da28c",
+    "tests/review/autosave-home.spec.cjs": "fe460f0e10fcaff2f1582d0b5a5a900a189400741817fe6f2b211eee922e3eaa",
+    "tests/review/chat.spec.cjs": "bbc09b216aa95a86053e2cd2f220cd54101baac420de59c4aeb98ddc4fd36e24",
+    "tests/review/completion.spec.cjs": "8e3c917bf1d41c3e45185d7f86b4fa707cb5a419a4eb3a97d3c595a8c39e6a95",
+    "tests/review/document-preview.spec.cjs": "de46f04d574a7cc6ccca7a0f997e281e3172f292e3ae5d0b994cf5889f8cf031",
+    "tests/review/features.spec.cjs": "670ac8a0d38ed4506c6f0d983b1b179c87e25962a654f1014475d1246634bdca",
+    "tests/review/final-delivery.spec.cjs": "834af8f53fbb0a0060c07ddea77c74e9731e031b1149768e28ae09e3c684e319",
+    "tests/review/final-options.json": "fdcf511a5300dc89138d54178915913aeaba24a48eb3a076a51a72e06a54958f",
+    "tests/review/home-menu.spec.cjs": "97693195ab09638d0468237f5cbc4a5920ce479a199a96d1a4021d5835af7570",
+    "tests/review/layout.spec.cjs": "bd0fc8604e2499baa134e9107b97e419056933691f561cf9360c1717963b2964",
+    "tests/review/login-route.spec.cjs": "987484ef9b9639c5086be92e10f60762f1315d67395cad6732ac13f51a841087",
+    "tests/review/numeric-regression.spec.cjs": "cd526fa2ad97d38cddc0895cd0e78bda47304cb538caafecb690f977fccdf839",
+    "tests/review/persistent-workspace.spec.cjs": "bc2b7ae003b365041dee20492a9919d19be307a8dab98a61d6181529231dae4c",
+    "tests/review/photo.spec.cjs": "287c7a25209b7c500bd2b012943d8ec86bf1941ebba4fd9c2d6f171d136e9db1",
+    "tests/review/platform.spec.cjs": "d30407eaadac8710a0320d8d17fb64f46cd45da5aafe62b7bb77c90becb81442",
+    "tests/review/policy-pricing.spec.cjs": "c0d607668e56122b90b7c3ed2ce94cc67b0b96395c5f469fce18c61a360e06eb",
+    "tests/review/review-options.json": "533a58bb0b6dda226f286605353c75ff959ec6ef73425323839f139c707a2be0",
+    "tests/review/tariff-return.spec.cjs": "1b60dfb43623558ddf72f83c2b1c50850381a03cf1e734c6006eb4e765d5d2b7",
+    "tests/review/three-image-models.spec.cjs": "f7670e40a76d0ee17f0e39e97f1e77c1d0f7cc97afc731294988f2b2e7e578a2",
+    "tests/review/workspace-update.spec.cjs": "dccd86788fa832d8838a96e9856b6fbdab38f474de8962dda2c33d3524a0d90f",
+    "tests/site-contract.test.cjs": "23c1f8288e13d6164b6786059ffdc88d979286b7cf307cb0da030d385b8a4b4f"
+  }
+}
